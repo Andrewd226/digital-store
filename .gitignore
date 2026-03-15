@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# uv / virtualenv
+.venv/
+
+# Django
+*.log
+db.sqlite3
+/staticfiles/
+/media/
+
+# Переменные окружения — НИКОГДА не коммитить
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
