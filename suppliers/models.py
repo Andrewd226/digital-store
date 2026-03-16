@@ -19,6 +19,13 @@ class Supplier(AbstractPartner):
         EMAIL = "email", "E-mail прайс-лист"
         MANUAL = "manual", "Вручную"
 
+    # Переопределяем users чтобы избежать конфликта reverse accessor с Oscar Partner
+    users = models.ManyToManyField(
+        "auth.User",
+        related_name="suppliers",
+        blank=True,
+        verbose_name="Пользователи",
+    )
     sync_method = models.TextField(
         choices=SyncMethod.choices,
         default=SyncMethod.MANUAL,
