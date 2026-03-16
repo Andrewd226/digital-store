@@ -53,7 +53,7 @@ INSTALLED_APPS = [
 
     # Oscar
     'oscar.config.Shop',
-    'oscar.apps.analytics.apps.AnalyticsConfig',
+    # 'oscar.apps.analytics.apps.AnalyticsConfig',
     'oscar.apps.checkout.apps.CheckoutConfig',
     'oscar.apps.address.apps.AddressConfig',
     'oscar.apps.shipping.apps.ShippingConfig',
