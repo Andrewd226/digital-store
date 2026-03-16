@@ -1,6 +1,6 @@
-from django.apps import AppConfig
+from oscar.apps.partner.apps import PartnerConfig as OscarPartnerConfig
 
 
-class PartnerConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'partner'
+class PartnerConfig(OscarPartnerConfig):
+    name = "partner"
+    default_auto_field = "django.db.models.BigAutoField"
