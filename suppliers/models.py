@@ -1,16 +1,15 @@
 from django.db import models
 from encrypted_fields.fields import EncryptedCharField
-from oscar.apps.partner.abstract_models import AbstractPartner
 
 
 # ─── 1.1 Supplier ─────────────────────────────────────────────────────────────
 
 
-class Supplier(AbstractPartner):
+class Supplier(models.Model):
     """
-    Расширяем стандартный Oscar Partner.
+    Поставщик товаров. Самостоятельная модель — не наследует AbstractPartner,
+    чтобы не конфликтовать с Oscar Partner при регистрации моделей.
     Данные не удаляются — отключение через supplier_is_active = False.
-    Своё имя поля во избежание конфликта с AbstractPartner.
     """
 
     class SyncMethod(models.TextChoices):
@@ -19,12 +18,13 @@ class Supplier(AbstractPartner):
         EMAIL = "email", "E-mail прайс-лист"
         MANUAL = "manual", "Вручную"
 
-    # Переопределяем users чтобы избежать конфликта reverse accessor с Oscar Partner
-    users = models.ManyToManyField(
-        "auth.User",
-        related_name="suppliers",
-        blank=True,
-        verbose_name="Пользователи",
+    name = models.TextField(
+        verbose_name="Название",
+    )
+    code = models.SlugField(
+        unique=True,
+        verbose_name="Код",
+        help_text="Уникальный идентификатор, используется в URL и импорте",
     )
     sync_method = models.TextField(
         choices=SyncMethod.choices,
@@ -54,7 +54,6 @@ class Supplier(AbstractPartner):
         verbose_name="Расписание (cron)",
         help_text='Например: "0 6 * * *" — каждый день в 06:00',
     )
-    # Мягкое отключение — своё имя во избежание конфликта с AbstractPartner
     supplier_is_active = models.BooleanField(
         default=True,
         verbose_name="Поставщик активен",
@@ -66,7 +65,7 @@ class Supplier(AbstractPartner):
         help_text="Меньше = выше приоритет при выборе стратегии",
     )
 
-    class Meta(AbstractPartner.Meta):
+    class Meta:
         verbose_name = "Поставщик"
         verbose_name_plural = "Поставщики"
         ordering = ["priority", "name"]
