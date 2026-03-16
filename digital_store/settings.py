@@ -58,12 +58,12 @@ INSTALLED_APPS = [
     'oscar.apps.address.apps.AddressConfig',
     'oscar.apps.shipping.apps.ShippingConfig',
     'oscar.apps.catalogue.apps.CatalogueConfig',
-    # 'catalogue.apps.CatalogueConfig',                   # ← наш форк
+    'catalogue.apps.CatalogueConfig',                   # ← наш форк
     'oscar.apps.catalogue.reviews.apps.CatalogueReviewsConfig',
     # 'catalogue.reviews.apps.CatalogueReviewsConfig',    # ← наш форк
     'oscar.apps.communication.apps.CommunicationConfig',
     'oscar.apps.partner.apps.PartnerConfig',
-    # 'partner.apps.PartnerConfig',                       # ← наш форк
+    'partner.apps.PartnerConfig',                       # ← наш форк
     'oscar.apps.basket.apps.BasketConfig',
     'oscar.apps.payment.apps.PaymentConfig',
     'oscar.apps.offer.apps.OfferConfig',
