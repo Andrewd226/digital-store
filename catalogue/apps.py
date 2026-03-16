@@ -1,6 +1,6 @@
-from django.apps import AppConfig
+from oscar.apps.catalogue.apps import CatalogueConfig as OscarCatalogueConfig
 
 
-class CatalogueConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoField"
+class CatalogueConfig(OscarCatalogueConfig):
     name = "catalogue"
+    default_auto_field = "django.db.models.BigAutoField"
