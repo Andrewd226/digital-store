@@ -124,7 +124,7 @@ class ExchangeRate(models.Model):
         verbose_name="Курс",
         help_text="Сколько to_currency за 1 from_currency",
     )
-    rate_date = models.DateField(verbose_name="Дата курса")
+    rate_datetime = models.DateTimeField(verbose_name="Дата и время курса")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлён")
 
     class Meta:
@@ -185,7 +185,7 @@ class ExchangeRateHistory(models.Model):
         blank=False,
         verbose_name="Курс",
     )
-    rate_date = models.DateField(verbose_name="Дата курса")
+    rate_datetime = models.DateTimeField(verbose_name="Дата и время курса")
     # NULL при первой записи
     previous_rate = models.DecimalField(
         max_digits=18,
@@ -206,7 +206,7 @@ class ExchangeRateHistory(models.Model):
         ordering = ["-recorded_at"]
         indexes = [
             models.Index(
-                fields=["snapshot_from_currency", "snapshot_to_currency", "-rate_date"],
+                fields=["snapshot_from_currency", "snapshot_to_currency", "-rate_datetime"],
                 name="idx_rate_history_pair_date",
             ),
             models.Index(
@@ -218,7 +218,7 @@ class ExchangeRateHistory(models.Model):
     def __str__(self):
         return (
             f"{self.snapshot_from_currency}/{self.snapshot_to_currency} = {self.rate} | "
-            f"{self.rate_date} | {self.snapshot_source_name}"
+            f"{self.rate_datetime:%Y-%m-%d %H:%M:%S} | {self.snapshot_source_name}"
         )
 
     @property
