@@ -16,6 +16,7 @@ dependencies = [
     "sorl-thumbnail>=12.11",
     "django-treebeard>=4.7",
     "django-tables2>=2.7",
+    "pydantic>=2.12.5",
 ]
 
 [dependency-groups]
