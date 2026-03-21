@@ -1,7 +1,6 @@
 from django.db import models
 from oscar.apps.catalogue.abstract_models import AbstractProduct
 
-
 # ─── Форк Oscar Product ───────────────────────────────────────────────────────
 
 

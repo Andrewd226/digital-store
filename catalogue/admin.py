@@ -1,1 +1,1 @@
-from oscar.apps.catalogue.admin import *    # noqa: F403
+from oscar.apps.catalogue.admin import *  # noqa: F403

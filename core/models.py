@@ -1,10 +1,8 @@
-from django.db import models
-
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
- 
- 
+
+
 class Currency(models.Model):
     """
     Справочник валют.
@@ -12,11 +10,11 @@ class Currency(models.Model):
     Мультиязычность названия — через django-modeltranslation.
     Данные не удаляются.
     """
- 
+
     class CurrencyType(models.TextChoices):
         FIAT = "FIAT", _("Фиатная валюта")
         CRYPTO = "CRYPTO", _("Криптовалюта")
- 
+
     # ISO 4217 для фиатных (USD, EUR), тикер для крипто (BTC, ETH)
     currency_code = models.TextField(
         unique=True,
@@ -43,11 +41,11 @@ class Currency(models.Model):
         default=2,
         verbose_name=_("Знаков после запятой"),
     )
- 
+
     class Meta:
         verbose_name = _("Валюта")
         verbose_name_plural = _("Валюты")
         ordering = ["currency_type", "currency_code"]
- 
+
     def __str__(self):
         return f"{self.currency_code} — {self.name}"

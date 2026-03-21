@@ -8,7 +8,7 @@ Data Access Objects для работы с курсами валют.
 
 import logging
 
-from currencies.dto import RateDTO, SyncResultDTO
+from currencies.dto import RateDTO
 
 logger = logging.getLogger(__name__)
 

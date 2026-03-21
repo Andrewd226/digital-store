@@ -1,1 +1,1 @@
-from oscar.apps.partner.models import *     # noqa: F403
+from oscar.apps.partner.models import *  # noqa: F403

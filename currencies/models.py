@@ -1,7 +1,6 @@
 from django.db import models
 from encrypted_fields.fields import EncryptedCharField
 
-
 # ─── 2.1 CurrencyRateSource ───────────────────────────────────────────────────
 
 
