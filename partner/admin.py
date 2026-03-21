@@ -1,1 +1,1 @@
-from oscar.apps.partner.admin import *  
+from oscar.apps.partner.admin import *  # noqa: F403
