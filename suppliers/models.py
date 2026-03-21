@@ -170,9 +170,7 @@ class SupplierCatalogSync(models.Model):
 
     def __str__(self):
         return (
-            f"{self.supplier.name} | "
-            f"{self.started_at:%Y-%m-%d %H:%M} | "
-            f"{self.get_status_display()}"
+            f"{self.supplier.name} | {self.started_at:%Y-%m-%d %H:%M} | {self.get_status_display()}"
         )
 
     @property

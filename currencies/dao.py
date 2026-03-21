@@ -37,8 +37,7 @@ class ExchangeRateDAO:
         # Загружаем все нужные валюты одним запросом
         all_codes = {r.from_code for r in rates} | {r.to_code for r in rates}
         currency_map = {
-            c.currency_code: c
-            for c in Currency.objects.filter(currency_code__in=all_codes)
+            c.currency_code: c for c in Currency.objects.filter(currency_code__in=all_codes)
         }
 
         updated = 0
@@ -50,7 +49,8 @@ class ExchangeRateDAO:
             if not from_currency or not to_currency:
                 logger.debug(
                     "Пропуск курса %s/%s — валюта не найдена в справочнике",
-                    dto.from_code, dto.to_code,
+                    dto.from_code,
+                    dto.to_code,
                 )
                 continue
 
@@ -131,9 +131,7 @@ class CurrencyRateSyncDAO:
         """Возвращает список id всех активных источников курсов."""
         from currencies.models import CurrencyRateSource
 
-        return list(
-            CurrencyRateSource.objects.filter(is_active=True).values_list("id", flat=True)
-        )
+        return list(CurrencyRateSource.objects.filter(is_active=True).values_list("id", flat=True))
 
     def get_source_name(self, source_id: int) -> str:
         from currencies.models import CurrencyRateSource

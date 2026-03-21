@@ -18,21 +18,21 @@ import environ
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
-environ.Env.read_env(BASE_DIR / '.env')
+environ.Env.read_env(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECRET_KEY = 'django-insecure-*e#qz*wezqpwqj86+h(*ffthzc@ie1%*7t_f=-44m!#p$_))zc'
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = True
-DEBUG = env.bool('DEBUG', default=False)
+DEBUG = env.bool("DEBUG", default=False)
 
 # ALLOWED_HOSTS = []
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
 
 # ─── Apps ─────────────────────────────────────────────────────────────────────
@@ -40,88 +40,82 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 # Application definition
 
 INSTALLED_APPS = [
-    'modeltranslation',               # ← ОБЯЗАТЕЛЬНО до django.contrib.admin
-
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.sites',
-    'django.contrib.flatpages',
-
+    "modeltranslation",  # ← ОБЯЗАТЕЛЬНО до django.contrib.admin
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "django.contrib.flatpages",
     # Oscar
-    'oscar.config.Shop',
-    'oscar.apps.analytics.apps.AnalyticsConfig',
-    'oscar.apps.checkout.apps.CheckoutConfig',
-    'oscar.apps.address.apps.AddressConfig',
-    'oscar.apps.shipping.apps.ShippingConfig',
+    "oscar.config.Shop",
+    "oscar.apps.analytics.apps.AnalyticsConfig",
+    "oscar.apps.checkout.apps.CheckoutConfig",
+    "oscar.apps.address.apps.AddressConfig",
+    "oscar.apps.shipping.apps.ShippingConfig",
     # 'oscar.apps.catalogue.apps.CatalogueConfig',
-    'catalogue.apps.CatalogueConfig',                   # ← наш форк
-    'oscar.apps.catalogue.reviews.apps.CatalogueReviewsConfig',
-    'oscar.apps.communication.apps.CommunicationConfig',
+    "catalogue.apps.CatalogueConfig",  # ← наш форк
+    "oscar.apps.catalogue.reviews.apps.CatalogueReviewsConfig",
+    "oscar.apps.communication.apps.CommunicationConfig",
     # 'oscar.apps.partner.apps.PartnerConfig',
-    'partner.apps.PartnerConfig',                       # ← наш форк
-    'oscar.apps.basket.apps.BasketConfig',
-    'oscar.apps.payment.apps.PaymentConfig',
-    'oscar.apps.offer.apps.OfferConfig',
-    'oscar.apps.order.apps.OrderConfig',
-    'oscar.apps.customer.apps.CustomerConfig',
-    'oscar.apps.search.apps.SearchConfig',
-    'oscar.apps.voucher.apps.VoucherConfig',
-    'oscar.apps.wishlists.apps.WishlistsConfig',
-    'oscar.apps.dashboard.apps.DashboardConfig',
-    'oscar.apps.dashboard.reports.apps.ReportsDashboardConfig',
-    'oscar.apps.dashboard.users.apps.UsersDashboardConfig',
-    'oscar.apps.dashboard.orders.apps.OrdersDashboardConfig',
-    'oscar.apps.dashboard.catalogue.apps.CatalogueDashboardConfig',
-    'oscar.apps.dashboard.offers.apps.OffersDashboardConfig',
-    'oscar.apps.dashboard.partners.apps.PartnersDashboardConfig',
-    'oscar.apps.dashboard.pages.apps.PagesDashboardConfig',
-    'oscar.apps.dashboard.ranges.apps.RangesDashboardConfig',
-    'oscar.apps.dashboard.reviews.apps.ReviewsDashboardConfig',
-    'oscar.apps.dashboard.vouchers.apps.VouchersDashboardConfig',
-    'oscar.apps.dashboard.communications.apps.CommunicationsDashboardConfig',
-    'oscar.apps.dashboard.shipping.apps.ShippingDashboardConfig',
-
+    "partner.apps.PartnerConfig",  # ← наш форк
+    "oscar.apps.basket.apps.BasketConfig",
+    "oscar.apps.payment.apps.PaymentConfig",
+    "oscar.apps.offer.apps.OfferConfig",
+    "oscar.apps.order.apps.OrderConfig",
+    "oscar.apps.customer.apps.CustomerConfig",
+    "oscar.apps.search.apps.SearchConfig",
+    "oscar.apps.voucher.apps.VoucherConfig",
+    "oscar.apps.wishlists.apps.WishlistsConfig",
+    "oscar.apps.dashboard.apps.DashboardConfig",
+    "oscar.apps.dashboard.reports.apps.ReportsDashboardConfig",
+    "oscar.apps.dashboard.users.apps.UsersDashboardConfig",
+    "oscar.apps.dashboard.orders.apps.OrdersDashboardConfig",
+    "oscar.apps.dashboard.catalogue.apps.CatalogueDashboardConfig",
+    "oscar.apps.dashboard.offers.apps.OffersDashboardConfig",
+    "oscar.apps.dashboard.partners.apps.PartnersDashboardConfig",
+    "oscar.apps.dashboard.pages.apps.PagesDashboardConfig",
+    "oscar.apps.dashboard.ranges.apps.RangesDashboardConfig",
+    "oscar.apps.dashboard.reviews.apps.ReviewsDashboardConfig",
+    "oscar.apps.dashboard.vouchers.apps.VouchersDashboardConfig",
+    "oscar.apps.dashboard.communications.apps.CommunicationsDashboardConfig",
+    "oscar.apps.dashboard.shipping.apps.ShippingDashboardConfig",
     # Зависимости Oscar
-    'haystack',
-    'widget_tweaks',
-    'treebeard',
-    'sorl.thumbnail',
-    'django_tables2',
-
+    "haystack",
+    "widget_tweaks",
+    "treebeard",
+    "sorl.thumbnail",
+    "django_tables2",
     # REST Framework
-    'rest_framework',
-    'rest_framework.authtoken',
-
+    "rest_framework",
+    "rest_framework.authtoken",
     # Шифрование
-    'encrypted_fields',
-
+    "encrypted_fields",
     # Наши приложения
-    'core',
-    'suppliers',
-    'currencies',
+    "core",
+    "suppliers",
+    "currencies",
 ]
 
 HAYSTACK_CONNECTIONS = {
-    'default': {'ENGINE': 'haystack.backends.simple_backend.SimpleEngine'},
+    "default": {"ENGINE": "haystack.backends.simple_backend.SimpleEngine"},
 }
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'oscar.apps.basket.middleware.BasketMiddleware',
-    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
-    'partner.middleware.CurrencyMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "oscar.apps.basket.middleware.BasketMiddleware",
+    "django.contrib.flatpages.middleware.FlatpageFallbackMiddleware",
+    "partner.middleware.CurrencyMiddleware",
 ]
 
 ROOT_URLCONF = "digital_store.urls"
@@ -130,19 +124,19 @@ ROOT_URLCONF = "digital_store.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'oscar.apps.search.context_processors.search_form',
-                'oscar.apps.checkout.context_processors.checkout',
-                'oscar.apps.communication.notifications.context_processors.notifications',
-                'oscar.core.context_processors.metadata',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "oscar.apps.search.context_processors.search_form",
+                "oscar.apps.checkout.context_processors.checkout",
+                "oscar.apps.communication.notifications.context_processors.notifications",
+                "oscar.core.context_processors.metadata",
             ],
         },
     },
@@ -157,14 +151,14 @@ TEMPLATES = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE':   'django.db.backends.postgresql',
-        'NAME':     env('DB_NAME'),
-        'USER':     env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST':     env('DB_HOST', default='localhost'),
-        'PORT':     env('DB_PORT', default='5432'),
-        'CONN_MAX_AGE': 600,
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("DB_NAME"),
+        "USER": env("DB_USER"),
+        "PASSWORD": env("DB_PASSWORD"),
+        "HOST": env("DB_HOST", default="localhost"),
+        "PORT": env("DB_PORT", default="5432"),
+        "CONN_MAX_AGE": 600,
     }
 }
 
@@ -189,8 +183,8 @@ DATABASES = {
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 
 AUTHENTICATION_BACKENDS = (
-    'oscar.apps.customer.auth_backends.EmailBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    "oscar.apps.customer.auth_backends.EmailBackend",
+    "django.contrib.auth.backends.ModelBackend",
 )
 
 
@@ -199,20 +193,20 @@ AUTHENTICATION_BACKENDS = (
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-LANGUAGES     = [('en', 'English'), ('ru', 'Русский')]
+LANGUAGE_CODE = "en-us"
+LANGUAGES = [("en", "English"), ("ru", "Русский")]
 
 TIME_ZONE = "UTC"
 
 USE_I18N = True
 USE_TZ = True
 
-MODELTRANSLATION_DEFAULT_LANGUAGE = 'en'
-MODELTRANSLATION_LANGUAGES        = ('en', 'ru')
+MODELTRANSLATION_DEFAULT_LANGUAGE = "en"
+MODELTRANSLATION_LANGUAGES = ("en", "ru")
 
 # ─── Шифрование ───────────────────────────────────────────────────────────────
 
-SALT_KEY = env('SALT_KEY')
+SALT_KEY = env("SALT_KEY")
 
 
 # ─── Static / Media ───────────────────────────────────────────────────────────
@@ -220,13 +214,13 @@ SALT_KEY = env('SALT_KEY')
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 # STATIC_URL = 'static/'
-STATIC_URL       = '/static/'
-STATIC_ROOT      = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-MEDIA_URL        = '/media/'
-MEDIA_ROOT       = BASE_DIR / 'media'
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SITE_ID = 1
 
 # Default primary key field type
@@ -237,20 +231,20 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ─── DRF ──────────────────────────────────────────────────────────────────────
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
 }
 
 # ─── Oscar ────────────────────────────────────────────────────────────────────
 
-OSCAR_DEFAULT_CURRENCY = 'RUB'
-OSCAR_SHOP_NAME        = 'Digital Store'
+OSCAR_DEFAULT_CURRENCY = "RUB"
+OSCAR_SHOP_NAME = "Digital Store"
 
 from oscar.defaults import *  # noqa
