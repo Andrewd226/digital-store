@@ -64,7 +64,9 @@ class BaseFetcher(ABC):
         return response
 
     def _tracked_codes(self) -> set:
-        return set(self.source.tracked_currencies.values_list("currency_code", flat=True))
+        return set(
+            self.source.tracked_currencies.values_list("currency_code", flat=True)
+        )
 
 
 # ─── CoinCap ──────────────────────────────────────────────────────────────────
@@ -127,7 +129,7 @@ class CoinCapFetcher(BaseFetcher):
                 continue
             try:
                 rates_usd[code] = Decimal(str(item["rateUsd"]))
-            except InvalidOperation, KeyError:
+            except (InvalidOperation, KeyError):
                 logger.warning("CoinCap: не удалось распарсить rateUsd для %s", item.get("id"))
 
         rate_datetime = timezone.now()
@@ -142,19 +144,16 @@ class CoinCapFetcher(BaseFetcher):
                 try:
                     # rate(from→to) = rateUsd(from) / rateUsd(to)
                     rate = rates_usd[from_code] / rates_usd[to_code]
-                    results.append(
-                        RateDTO(
-                            from_code=from_code,
-                            to_code=to_code,
-                            rate=rate,
-                            rate_datetime=rate_datetime,
-                        )
-                    )
-                except InvalidOperation, ZeroDivisionError:
+                    results.append(RateDTO(
+                        from_code=from_code,
+                        to_code=to_code,
+                        rate=rate,
+                        rate_datetime=rate_datetime,
+                    ))
+                except (InvalidOperation, ZeroDivisionError):
                     logger.warning(
                         "CoinCap: не удалось вычислить кросс-курс %s/%s",
-                        from_code,
-                        to_code,
+                        from_code, to_code,
                     )
 
         return results
@@ -238,11 +237,8 @@ def sync_currency_rates(source_id: int) -> SyncResultDTO:
         def sync_currency_rates(source_id: int) -> dict:
             return sync_currency_rates(source_id).model_dump()
     """
-    from currencies.models import CurrencyRateSource
-
-    try:
-        source = CurrencyRateSource.objects.get(id=source_id, is_active=True)
-    except CurrencyRateSource.DoesNotExist:
+    source = _sync_dao.get_active_source(source_id)
+    if source is None:
         logger.warning("CurrencyRateSource id=%s не найден или неактивен", source_id)
         return SyncResultDTO(status="skipped", source_id=source_id)
 

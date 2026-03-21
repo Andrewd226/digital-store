@@ -1,6 +1,7 @@
 from django.db import models
 from encrypted_fields.fields import EncryptedCharField
 
+
 # ─── 2.1 CurrencyRateSource ───────────────────────────────────────────────────
 
 
@@ -124,7 +125,7 @@ class ExchangeRate(models.Model):
         help_text="Сколько to_currency за 1 from_currency",
     )
     rate_datetime = models.DateTimeField(verbose_name="Дата и время курса")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлён")
+    updated_at = models.DateTimeField(verbose_name="Обновлён")
 
     class Meta:
         verbose_name = "Актуальный курс валют"
@@ -229,7 +230,9 @@ class ExchangeRateHistory(models.Model):
     @property
     def delta_pct(self):
         if self.previous_rate and self.previous_rate > 0:
-            return round(float(self.rate - self.previous_rate) / float(self.previous_rate) * 100, 4)
+            return round(
+                float(self.rate - self.previous_rate) / float(self.previous_rate) * 100, 4
+            )
         return None
 
 
@@ -278,7 +281,9 @@ class CurrencyRateSync(models.Model):
 
     def __str__(self):
         return (
-            f"{self.source.name} | {self.started_at:%Y-%m-%d %H:%M} | {self.get_status_display()}"
+            f"{self.source.name} | "
+            f"{self.started_at:%Y-%m-%d %H:%M} | "
+            f"{self.get_status_display()}"
         )
 
     @property
