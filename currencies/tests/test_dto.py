@@ -7,7 +7,6 @@ currencies/tests/test_dto.py
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 from pydantic import ValidationError
 
 from currencies.dto import RateDTO, SyncResultDTO
