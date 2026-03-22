@@ -231,9 +231,7 @@ class TestSyncCurrencyRates:
 
 @pytest.mark.django_db
 class TestSyncAllCurrencyRates:
-    def test_dispatches_to_all_active_sources(
-        self, coincap_source_with_credential, inactive_source
-    ):
+    def test_dispatches_to_all_active_sources(self, coincap_source_with_credential, inactive_source):
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
             {"id": "russian-ruble", "rateUsd": "0.011"},

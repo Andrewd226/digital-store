@@ -60,7 +60,7 @@ class TestRateDTO:
             rate=Decimal("90.5"),
             rate_datetime=rate_datetime,
         )
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             dto.rate = Decimal("100")
 
     def test_missing_fields_raise(self):

@@ -152,7 +152,9 @@ class TestCurrencyRateSyncDAO:
         assert sync.finished_at is None
 
     def test_create_running_inactive_source_raises(self, inactive_source):
-        with pytest.raises(Exception):
+        from currencies.models import CurrencyRateSource
+
+        with pytest.raises(CurrencyRateSource.DoesNotExist):
             self.dao.create_running(inactive_source.id)
 
     def test_mark_success(self, coincap_source):
