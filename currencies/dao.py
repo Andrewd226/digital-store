@@ -122,14 +122,22 @@ class ExchangeRateDAO:
                 )
 
         # 4. bulk_create новых записей чанками
-        #    ignore_conflicts=True — пропускать дубли на случай race condition
-        created_records: list[ExchangeRate] = []
+        #    ignore_conflicts=True — пропускать дубли на случай race condition.
+        #    ВАЖНО: при ignore_conflicts=True Django не гарантирует заполнение pk
+        #    в возвращаемых объектах. Поэтому после bulk_create перечитываем
+        #    свежесозданные записи из БД чтобы получить актуальные id для истории.
         for i in range(0, len(to_create), self.CHUNK_SIZE):
-            chunk = ExchangeRate.objects.bulk_create(
+            ExchangeRate.objects.bulk_create(
                 to_create[i : i + self.CHUNK_SIZE],
                 ignore_conflicts=True,
             )
-            created_records.extend(chunk)
+
+        # Перечитываем только что созданные записи (те у которых не было existing)
+        new_keys = set(new_dto_map.keys())
+        created_records: list[ExchangeRate] = [
+            r for r in ExchangeRate.objects.filter(source=source)
+            if (r.from_currency_id, r.to_currency_id) in new_keys
+        ]
 
         # 5. Формируем историю для новых записей (id доступны после bulk_create)
         for record in created_records:
@@ -150,7 +158,9 @@ class ExchangeRateDAO:
 
         # 6. bulk_create истории чанками
         for i in range(0, len(history_items), self.CHUNK_SIZE):
-            ExchangeRateHistory.objects.bulk_create(history_items[i : i + self.CHUNK_SIZE])
+            ExchangeRateHistory.objects.bulk_create(
+                history_items[i : i + self.CHUNK_SIZE]
+            )
 
         total = len(to_update) + len(created_records)
         logger.debug(

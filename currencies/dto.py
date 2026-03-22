@@ -6,7 +6,7 @@ Data Transfer Objects для синхронизации курсов валют.
     Fetcher → DAO → tasks
 """
 
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
