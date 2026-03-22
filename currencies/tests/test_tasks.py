@@ -8,11 +8,14 @@ from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
-from django.utils import timezone
 
 from currencies.models import CurrencyRateSync, ExchangeRate
-from currencies.tasks import CoinCapFetcher, get_fetcher, sync_all_currency_rates, sync_currency_rates
-
+from currencies.tasks import (
+    CoinCapFetcher,
+    get_fetcher,
+    sync_all_currency_rates,
+    sync_currency_rates,
+)
 
 # ─── Вспомогательные функции ──────────────────────────────────────────────────
 
@@ -30,7 +33,6 @@ def make_coincap_response(items: list[dict]) -> MagicMock:
 
 @pytest.mark.django_db
 class TestCoinCapFetcherFetch:
-
     def test_fetch_returns_rate_dtos(self, coincap_source_with_credential):
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
@@ -144,7 +146,6 @@ class TestCoinCapFetcherFetch:
 
 @pytest.mark.django_db
 class TestGetFetcher:
-
     def test_custom_api_returns_coincap_fetcher(self, coincap_source):
         fetcher = get_fetcher(coincap_source)
         assert isinstance(fetcher, CoinCapFetcher)
@@ -160,7 +161,6 @@ class TestGetFetcher:
 
 @pytest.mark.django_db
 class TestSyncCurrencyRates:
-
     def test_success(self, coincap_source_with_credential):
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
@@ -231,8 +231,9 @@ class TestSyncCurrencyRates:
 
 @pytest.mark.django_db
 class TestSyncAllCurrencyRates:
-
-    def test_dispatches_to_all_active_sources(self, coincap_source_with_credential, inactive_source):
+    def test_dispatches_to_all_active_sources(
+        self, coincap_source_with_credential, inactive_source
+    ):
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
             {"id": "russian-ruble", "rateUsd": "0.011"},
@@ -254,6 +255,7 @@ class TestSyncAllCurrencyRates:
             results = sync_all_currency_rates()
 
         from currencies.dto import SyncResultDTO
+
         assert all(isinstance(r, SyncResultDTO) for r in results)
 
     def test_empty_when_no_active_sources(self, inactive_source):

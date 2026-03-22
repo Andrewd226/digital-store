@@ -11,14 +11,12 @@ from django.utils import timezone
 
 from currencies.models import (
     CurrencyRateSync,
-    ExchangeRate,
     ExchangeRateHistory,
 )
 
 
 @pytest.mark.django_db
 class TestCurrencyRateSourceStr:
-
     def test_str_active(self, coincap_source):
         assert "CoinCap Test" in str(coincap_source)
         assert "USD" in str(coincap_source)
@@ -30,7 +28,6 @@ class TestCurrencyRateSourceStr:
 
 @pytest.mark.django_db
 class TestExchangeRateStr:
-
     def test_str(self, existing_rate):
         s = str(existing_rate)
         assert "USD" in s
@@ -40,7 +37,6 @@ class TestExchangeRateStr:
 
 @pytest.mark.django_db
 class TestExchangeRateHistory:
-
     def test_delta(self, existing_rate):
         history = ExchangeRateHistory(
             rate_record=existing_rate,
@@ -105,9 +101,9 @@ class TestExchangeRateHistory:
 
 @pytest.mark.django_db
 class TestCurrencyRateSync:
-
     def test_duration_seconds(self, coincap_source):
         from datetime import timedelta
+
         now = timezone.now()
         sync = CurrencyRateSync(
             source=coincap_source,

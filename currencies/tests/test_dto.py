@@ -7,14 +7,12 @@ currencies/tests/test_dto.py
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 from pydantic import ValidationError
 
 from currencies.dto import RateDTO, SyncResultDTO
 
 
 class TestRateDTO:
-
     def test_valid_rate(self, rate_datetime):
         dto = RateDTO(
             from_code="USD",
@@ -70,7 +68,6 @@ class TestRateDTO:
 
 
 class TestSyncResultDTO:
-
     def test_success(self):
         dto = SyncResultDTO(
             status="success",

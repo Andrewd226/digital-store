@@ -47,8 +47,7 @@ class ExchangeRateDAO:
         # 1. Загружаем все нужные валюты одним запросом
         all_codes = {r.from_code for r in rates} | {r.to_code for r in rates}
         currency_map: dict[str, object] = {
-            c.currency_code: c
-            for c in Currency.objects.filter(currency_code__in=all_codes)
+            c.currency_code: c for c in Currency.objects.filter(currency_code__in=all_codes)
         }
 
         # 2. Загружаем все существующие записи для этого источника одним запросом
@@ -73,7 +72,8 @@ class ExchangeRateDAO:
             if not from_currency or not to_currency:
                 logger.debug(
                     "Пропуск курса %s/%s — валюта не найдена в справочнике",
-                    dto.from_code, dto.to_code,
+                    dto.from_code,
+                    dto.to_code,
                 )
                 continue
 
@@ -88,25 +88,29 @@ class ExchangeRateDAO:
                 existing.updated_at = now
                 to_update.append(existing)
 
-                history_items.append(ExchangeRateHistory(
-                    rate_record=existing,
-                    snapshot_source_name=source.name,
-                    snapshot_from_currency=dto.from_code,
-                    snapshot_to_currency=dto.to_code,
-                    rate=dto.rate,
-                    rate_datetime=dto.rate_datetime,
-                    previous_rate=existing._previous_rate,
-                ))
+                history_items.append(
+                    ExchangeRateHistory(
+                        rate_record=existing,
+                        snapshot_source_name=source.name,
+                        snapshot_from_currency=dto.from_code,
+                        snapshot_to_currency=dto.to_code,
+                        rate=dto.rate,
+                        rate_datetime=dto.rate_datetime,
+                        previous_rate=existing._previous_rate,
+                    )
+                )
             else:
                 # Новая запись
-                to_create.append(ExchangeRate(
-                    source=source,
-                    from_currency=from_currency,
-                    to_currency=to_currency,
-                    rate=dto.rate,
-                    rate_datetime=dto.rate_datetime,
-                    updated_at=now,
-                ))
+                to_create.append(
+                    ExchangeRate(
+                        source=source,
+                        from_currency=from_currency,
+                        to_currency=to_currency,
+                        rate=dto.rate,
+                        rate_datetime=dto.rate_datetime,
+                        updated_at=now,
+                    )
+                )
                 new_dto_map[key] = dto
 
         # 3. bulk_update существующих записей чанками
@@ -132,26 +136,29 @@ class ExchangeRateDAO:
             key = (record.from_currency_id, record.to_currency_id)
             dto = new_dto_map.get(key)
             if dto:
-                history_items.append(ExchangeRateHistory(
-                    rate_record=record,
-                    snapshot_source_name=source.name,
-                    snapshot_from_currency=dto.from_code,
-                    snapshot_to_currency=dto.to_code,
-                    rate=dto.rate,
-                    rate_datetime=dto.rate_datetime,
-                    previous_rate=None,
-                ))
+                history_items.append(
+                    ExchangeRateHistory(
+                        rate_record=record,
+                        snapshot_source_name=source.name,
+                        snapshot_from_currency=dto.from_code,
+                        snapshot_to_currency=dto.to_code,
+                        rate=dto.rate,
+                        rate_datetime=dto.rate_datetime,
+                        previous_rate=None,
+                    )
+                )
 
         # 6. bulk_create истории чанками
         for i in range(0, len(history_items), self.CHUNK_SIZE):
-            ExchangeRateHistory.objects.bulk_create(
-                history_items[i : i + self.CHUNK_SIZE]
-            )
+            ExchangeRateHistory.objects.bulk_create(history_items[i : i + self.CHUNK_SIZE])
 
         total = len(to_update) + len(created_records)
         logger.debug(
             "save_rates [%s]: создано=%d, обновлено=%d, история=%d",
-            source.name, len(created_records), len(to_update), len(history_items),
+            source.name,
+            len(created_records),
+            len(to_update),
+            len(history_items),
         )
         return total
 
@@ -201,9 +208,7 @@ class CurrencyRateSyncDAO:
         """Возвращает список id всех активных источников курсов."""
         from currencies.models import CurrencyRateSource
 
-        return list(
-            CurrencyRateSource.objects.filter(is_active=True).values_list("id", flat=True)
-        )
+        return list(CurrencyRateSource.objects.filter(is_active=True).values_list("id", flat=True))
 
     def get_active_source(self, source_id: int):
         """
