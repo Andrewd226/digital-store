@@ -7,12 +7,14 @@ currencies/tests/test_dto.py
 from decimal import Decimal
 
 import pytest
+from django.utils import timezone
 from pydantic import ValidationError
 
 from currencies.dto import RateDTO, SyncResultDTO
 
 
 class TestRateDTO:
+
     def test_valid_rate(self, rate_datetime):
         dto = RateDTO(
             from_code="USD",
@@ -66,8 +68,19 @@ class TestRateDTO:
         with pytest.raises(ValidationError):
             RateDTO(from_code="USD", to_code="RUB")
 
+    def test_naive_datetime_raises(self):
+        from datetime import datetime
+        with pytest.raises(ValidationError, match="таймзону"):
+            RateDTO(
+                from_code="USD",
+                to_code="RUB",
+                rate=Decimal("90.5"),
+                rate_datetime=datetime(2025, 1, 1, 12, 0, 0),  # naive — без tzinfo
+            )
+
 
 class TestSyncResultDTO:
+
     def test_success(self):
         dto = SyncResultDTO(
             status="success",

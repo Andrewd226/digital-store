@@ -6,7 +6,7 @@ Data Transfer Objects для синхронизации курсов валют.
     Fetcher → DAO → tasks
 """
 
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
@@ -33,6 +33,13 @@ class RateDTO(BaseModel):
     def rate_must_be_positive(cls, v: Decimal) -> Decimal:
         if v <= 0:
             raise ValueError("rate должен быть больше нуля")
+        return v
+
+    @field_validator("rate_datetime")
+    @classmethod
+    def rate_datetime_must_be_aware(cls, v: datetime) -> datetime:
+        if v.tzinfo is None or v.tzinfo.utcoffset(v) is None:
+            raise ValueError("rate_datetime должен содержать таймзону (timezone-aware)")
         return v
 
     model_config = {"frozen": True}
