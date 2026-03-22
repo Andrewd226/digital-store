@@ -84,3 +84,8 @@ uv run ruff format --check .
 
 ## Проверить конкретный файл
 uv run ruff check suppliers/models.py
+
+
+# Тесты
+
+uv run pytest currencies/tests/ -v
