@@ -61,3 +61,9 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["core", "suppliers", "currencies", "catalogue", "partner"]
+
+# ─── Pytest ───────────────────────────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "digital_store.settings"
+pythonpath = ["."]
