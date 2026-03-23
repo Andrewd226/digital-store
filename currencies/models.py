@@ -135,7 +135,7 @@ class ExchangeRate(models.Model):
                 name="unique_rate_per_source",
             ),
             models.CheckConstraint(
-                check=~models.Q(from_currency=models.F("to_currency")),
+                condition=~models.Q(from_currency=models.F("to_currency")),
                 name="exchange_rate_different_currencies",
             ),
         ]

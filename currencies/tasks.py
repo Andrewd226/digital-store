@@ -22,7 +22,7 @@ import traceback
 from abc import ABC, abstractmethod
 from decimal import Decimal, InvalidOperation
 
-import requests
+import httpx
 from django.utils import timezone
 
 from currencies.dao import CurrencyRateSyncDAO, ExchangeRateDAO
@@ -58,8 +58,8 @@ class BaseFetcher(ABC):
     def fetch(self) -> list[RateDTO]:
         raise NotImplementedError
 
-    def _get(self, url: str, **kwargs) -> requests.Response:
-        response = requests.get(url, timeout=30, **kwargs)
+    def _get(self, url: str, **kwargs) -> httpx.Response:
+        response = httpx.get(url, timeout=30, **kwargs)
         response.raise_for_status()
         return response
 
