@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from encrypted_fields.fields import EncryptedCharField
 
 # ─── 2.1 CurrencyRateSource ───────────────────────────────────────────────────
@@ -123,7 +124,10 @@ class ExchangeRate(models.Model):
         verbose_name="Курс",
         help_text="Сколько to_currency за 1 from_currency",
     )
-    rate_datetime = models.DateTimeField(verbose_name="Дата и время курса")
+    rate_datetime = models.DateTimeField(
+        verbose_name="Дата и время курса",
+        default=timezone.now,  # ← добавить
+    )
     updated_at = models.DateTimeField(verbose_name="Обновлён")
 
     class Meta:
@@ -184,7 +188,10 @@ class ExchangeRateHistory(models.Model):
         blank=False,
         verbose_name="Курс",
     )
-    rate_datetime = models.DateTimeField(verbose_name="Дата и время курса")
+    rate_datetime = models.DateTimeField(
+        verbose_name="Дата и время курса",
+        default=timezone.now,  # ← добавить
+    )
     # NULL при первой записи
     previous_rate = models.DecimalField(
         max_digits=18,
