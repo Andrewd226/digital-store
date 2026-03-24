@@ -41,7 +41,7 @@ class TestCoinCapFetcherFetch:
         ]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response):
+        with patch("currencies.tasks.httpx.get", return_value=mock_response):
             fetcher = CoinCapFetcher(coincap_source_with_credential)
             rates = fetcher.fetch()
 
@@ -60,7 +60,7 @@ class TestCoinCapFetcherFetch:
         ]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response):
+        with patch("currencies.tasks.httpx.get", return_value=mock_response):
             fetcher = CoinCapFetcher(coincap_source_with_credential)
             rates = fetcher.fetch()
 
@@ -75,7 +75,7 @@ class TestCoinCapFetcherFetch:
         ]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response):
+        with patch("currencies.tasks.httpx.get", return_value=mock_response):
             fetcher = CoinCapFetcher(coincap_source_with_credential)
             rates = fetcher.fetch()
 
@@ -87,10 +87,9 @@ class TestCoinCapFetcherFetch:
         coincap_source.api_extra_config = {}
         coincap_source.tracked_currencies.clear()
 
-        with patch("currencies.tasks.requests.get") as mock_get:
+        with patch("currencies.tasks.httpx.get") as mock_get:
             mock_get.return_value = make_coincap_response([])
             fetcher = CoinCapFetcher(coincap_source)
-            # Переопределяем _build_ids_map чтобы вернуть пустой словарь
             fetcher._build_ids_map = lambda: {}
             rates = fetcher.fetch()
 
@@ -104,7 +103,7 @@ class TestCoinCapFetcherFetch:
         ]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response):
+        with patch("currencies.tasks.httpx.get", return_value=mock_response):
             fetcher = CoinCapFetcher(coincap_source_with_credential)
             rates = fetcher.fetch()
 
@@ -118,7 +117,7 @@ class TestCoinCapFetcherFetch:
         ]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response):
+        with patch("currencies.tasks.httpx.get", return_value=mock_response):
             fetcher = CoinCapFetcher(coincap_source_with_credential)
             rates = fetcher.fetch()
 
@@ -132,7 +131,7 @@ class TestCoinCapFetcherFetch:
         ]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response) as mock_get:
+        with patch("currencies.tasks.httpx.get", return_value=mock_response) as mock_get:
             fetcher = CoinCapFetcher(coincap_source_with_credential)
             fetcher.fetch()
 
@@ -168,7 +167,7 @@ class TestSyncCurrencyRates:
         ]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response):
+        with patch("currencies.tasks.httpx.get", return_value=mock_response):
             result = sync_currency_rates(coincap_source_with_credential.id)
 
         assert result.status == "success"
@@ -187,7 +186,7 @@ class TestSyncCurrencyRates:
         ]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response):
+        with patch("currencies.tasks.httpx.get", return_value=mock_response):
             sync_currency_rates(coincap_source_with_credential.id)
 
         assert ExchangeRate.objects.filter(source=coincap_source_with_credential).count() == 2
@@ -206,7 +205,7 @@ class TestSyncCurrencyRates:
         assert CurrencyRateSync.objects.count() == 0
 
     def test_failed_on_http_error(self, coincap_source_with_credential):
-        with patch("currencies.tasks.requests.get", side_effect=Exception("Connection refused")):
+        with patch("currencies.tasks.httpx.get", side_effect=Exception("Connection refused")):
             result = sync_currency_rates(coincap_source_with_credential.id)
 
         assert result.status == "failed"
@@ -218,7 +217,7 @@ class TestSyncCurrencyRates:
         assert sync.finished_at is not None
 
     def test_failed_sync_log_contains_traceback(self, coincap_source_with_credential):
-        with patch("currencies.tasks.requests.get", side_effect=ValueError("bad value")):
+        with patch("currencies.tasks.httpx.get", side_effect=ValueError("bad value")):
             sync_currency_rates(coincap_source_with_credential.id)
 
         sync = CurrencyRateSync.objects.get(source=coincap_source_with_credential)
@@ -238,7 +237,7 @@ class TestSyncAllCurrencyRates:
         ]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response):
+        with patch("currencies.tasks.httpx.get", return_value=mock_response):
             results = sync_all_currency_rates()
 
         # Только один активный источник
@@ -249,7 +248,7 @@ class TestSyncAllCurrencyRates:
         api_items = [{"id": "united-states-dollar", "rateUsd": "1.0"}]
         mock_response = make_coincap_response(api_items)
 
-        with patch("currencies.tasks.requests.get", return_value=mock_response):
+        with patch("currencies.tasks.httpx.get", return_value=mock_response):
             results = sync_all_currency_rates()
 
         from currencies.dto import SyncResultDTO

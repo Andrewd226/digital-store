@@ -17,22 +17,38 @@ from currencies.models import (
 
 @pytest.fixture
 def usd(db):
-    return Currency.objects.get(currency_code="USD")
+    currency, _ = Currency.objects.get_or_create(
+        currency_code="USD",
+        defaults={"name": "US Dollar", "currency_type": Currency.CurrencyType.FIAT, "symbol": "$"},
+    )
+    return currency
 
 
 @pytest.fixture
 def rub(db):
-    return Currency.objects.get(currency_code="RUB")
+    currency, _ = Currency.objects.get_or_create(
+        currency_code="RUB",
+        defaults={"name": "Russian Ruble", "currency_type": Currency.CurrencyType.FIAT, "symbol": "₽"},
+    )
+    return currency
 
 
 @pytest.fixture
 def eur(db):
-    return Currency.objects.get(currency_code="EUR")
+    currency, _ = Currency.objects.get_or_create(
+        currency_code="EUR",
+        defaults={"name": "Euro", "currency_type": Currency.CurrencyType.FIAT, "symbol": "€"},
+    )
+    return currency
 
 
 @pytest.fixture
 def btc(db):
-    return Currency.objects.get(currency_code="BTC")
+    currency, _ = Currency.objects.get_or_create(
+        currency_code="BTC",
+        defaults={"name": "Bitcoin", "currency_type": Currency.CurrencyType.CRYPTO, "symbol": "₿"},
+    )
+    return currency
 
 
 @pytest.fixture
