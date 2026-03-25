@@ -36,6 +36,14 @@ class CurrencyRateSource(models.Model):
         blank=True,
         verbose_name="Отслеживаемые валюты",
     )
+    api_extra_config = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Доп. конфигурация API",
+        help_text=(
+            'Для CoinCap: {"ids": {"USD": "united-states-dollar", "RUB": "russian-ruble"}}'
+        ),
+    )
     sync_schedule = models.TextField(
         default="0 9 * * 1-5",
         verbose_name="Расписание (cron)",
