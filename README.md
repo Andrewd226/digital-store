@@ -44,6 +44,10 @@ CREATE DATABASE digital_store OWNER usersvc_digital_store;
 GRANT ALL PRIVILEGES ON DATABASE digital_store TO usersvc_digital_store;
 
 
+CREATE USER test_usersvc_digital_store WITH PASSWORD 'test_password';
+CREATE DATABASE test_digital_store OWNER test_usersvc_digital_store;
+GRANT ALL PRIVILEGES ON DATABASE test_digital_store TO test_usersvc_digital_store;
+
 
 # Клонирование репозитория
 git clone https://github.com/Andrewd226/digital-store.git
