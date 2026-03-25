@@ -29,7 +29,6 @@ def make_rate_dto(from_code, to_code, rate, dt=None):
 
 @pytest.mark.django_db
 class TestExchangeRateDAOSaveRates:
-
     def setup_method(self):
         self.dao = ExchangeRateDAO()
 
@@ -72,9 +71,13 @@ class TestExchangeRateDAOSaveRates:
         new_rate = make_rate_dto("USD", "RUB", "95.0")
         self.dao.save_rates(coincap_source.id, [new_rate])
 
-        history = ExchangeRateHistory.objects.filter(
-            rate_record=existing_rate,
-        ).order_by("-recorded_at").first()
+        history = (
+            ExchangeRateHistory.objects.filter(
+                rate_record=existing_rate,
+            )
+            .order_by("-recorded_at")
+            .first()
+        )
         assert history.previous_rate == old_rate
         assert history.rate == Decimal("95.0")
 
@@ -127,8 +130,8 @@ class TestExchangeRateDAOSaveRates:
 
     def test_mixed_create_and_update(self, coincap_source, existing_rate, eur):
         rates = [
-            make_rate_dto("USD", "RUB", "95.0"),   # обновление
-            make_rate_dto("USD", "EUR", "0.92"),    # создание
+            make_rate_dto("USD", "RUB", "95.0"),  # обновление
+            make_rate_dto("USD", "EUR", "0.92"),  # создание
         ]
         total = self.dao.save_rates(coincap_source.id, rates)
 
@@ -139,7 +142,6 @@ class TestExchangeRateDAOSaveRates:
 
 @pytest.mark.django_db
 class TestCurrencyRateSyncDAO:
-
     def setup_method(self):
         self.dao = CurrencyRateSyncDAO()
 

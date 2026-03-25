@@ -28,7 +28,11 @@ def usd(db):
 def rub(db):
     currency, _ = Currency.objects.get_or_create(
         currency_code="RUB",
-        defaults={"name": "Russian Ruble", "currency_type": Currency.CurrencyType.FIAT, "symbol": "₽"},
+        defaults={
+            "name": "Russian Ruble",
+            "currency_type": Currency.CurrencyType.FIAT,
+            "symbol": "₽",
+        },
     )
     return currency
 

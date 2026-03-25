@@ -40,9 +40,7 @@ class CurrencyRateSource(models.Model):
         default=dict,
         blank=True,
         verbose_name="Доп. конфигурация API",
-        help_text=(
-            'Для CoinCap: {"ids": {"USD": "united-states-dollar", "RUB": "russian-ruble"}}'
-        ),
+        help_text=('Для CoinCap: {"ids": {"USD": "united-states-dollar", "RUB": "russian-ruble"}}'),
     )
     sync_schedule = models.TextField(
         default="0 9 * * 1-5",

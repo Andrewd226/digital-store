@@ -13,7 +13,6 @@ from currencies.dto import RateDTO, SyncResultDTO
 
 
 class TestRateDTO:
-
     def test_valid_rate(self, rate_datetime):
         dto = RateDTO(
             from_code="USD",
@@ -69,6 +68,7 @@ class TestRateDTO:
 
     def test_naive_datetime_raises(self):
         from datetime import datetime
+
         with pytest.raises(ValidationError, match="таймзону"):
             RateDTO(
                 from_code="USD",
@@ -79,7 +79,6 @@ class TestRateDTO:
 
 
 class TestSyncResultDTO:
-
     def test_success(self):
         dto = SyncResultDTO(
             status="success",
