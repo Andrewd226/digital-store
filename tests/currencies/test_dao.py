@@ -1,5 +1,5 @@
 """
-currencies/tests/test_dao.py
+tests/currencies/test_dao.py
 
 Тесты для DAO: ExchangeRateDAO, CurrencyRateSyncDAO.
 """

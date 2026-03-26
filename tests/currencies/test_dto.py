@@ -1,5 +1,5 @@
 """
-currencies/tests/test_dto.py
+tests/currencies/test_dto.py
 
 Тесты для DTO: RateDTO, SyncResultDTO.
 """

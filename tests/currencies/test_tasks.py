@@ -1,5 +1,5 @@
 """
-currencies/tests/test_tasks.py
+tests/currencies/test_tasks.py
 
 Тесты для tasks: CoinCapFetcher, sync_currency_rates, sync_all_currency_rates.
 """

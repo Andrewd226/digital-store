@@ -1,5 +1,5 @@
 """
-currencies/tests/conftest.py
+tests/conftest.py
 
 Общие фикстуры для тестов currencies.
 """

@@ -1,5 +1,5 @@
 """
-currencies/tests/test_models.py
+tests/currencies/test_models.py
 
 Тесты для моделей currencies.
 """
