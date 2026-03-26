@@ -80,7 +80,7 @@ def coincap_source_with_credential(coincap_source):
     CurrencyRateSourceCredential.objects.create(
         source=coincap_source,
         api_key="test-api-key",
-    )
+        api_secret="",
     return coincap_source
 
 
