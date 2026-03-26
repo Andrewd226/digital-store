@@ -92,4 +92,4 @@ uv run ruff check suppliers/models.py
 
 # Тесты
 
-uv run pytest currencies/tests/ -v
+uv run pytest tests/ -v
