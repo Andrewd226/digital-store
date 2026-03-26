@@ -100,7 +100,7 @@ def existing_rate(db, coincap_source, usd, rub):
         source=coincap_source,
         from_currency=usd,
         to_currency=rub,
-        rate="90.000000000000000000",
+        rate="90.0000000000000000000000000",
         rate_datetime=now,
         updated_at=now,
     )

@@ -44,10 +44,11 @@ class TestExchangeRateDAOSaveRates:
         assert rate.to_currency == rub
         assert rate.rate == Decimal("90.5")
 
-    def test_creates_history_for_new_rates(self, coincap_source):
+    def test_creates_history_for_new_rates(self, coincap_source, usd, rub):
         rates = [make_rate_dto("USD", "RUB", "90.5")]
-        self.dao.save_rates(coincap_source.id, rates)
+        total = self.dao.save_rates(coincap_source.id, rates)
 
+        assert total == 1
         history = ExchangeRateHistory.objects.filter(
             snapshot_from_currency="USD",
             snapshot_to_currency="RUB",
@@ -116,7 +117,7 @@ class TestExchangeRateDAOSaveRates:
         assert ExchangeRate.objects.filter(source=coincap_source).count() == 3
         assert ExchangeRateHistory.objects.count() == initial_count + 3
 
-    def test_chunked_save(self, coincap_source):
+    def test_chunked_save(self, coincap_source, usd, rub, eur):
         """Проверяет что данные сохраняются корректно при размере батча меньше числа записей."""
         original_chunk = ExchangeRateDAO.CHUNK_SIZE
         try:
