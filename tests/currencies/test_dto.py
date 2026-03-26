@@ -62,13 +62,12 @@ class TestRateDTO:
         with pytest.raises((ValidationError, AttributeError)):
             dto.rate = Decimal("100")
 
-    def test_missing_fields_raise(self, rate_datetime):
+    def test_missing_fields_raise(self):
+        """Отсутствие обязательных полей вызывает ValidationError."""
         with pytest.raises(ValidationError):
             RateDTO(
                 from_code="USD",
                 to_code="RUB",
-                rate=Decimal("90.5"),
-                rate_datetime=rate_datetime,
             )
 
     def test_naive_datetime_raises(self):
