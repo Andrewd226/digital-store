@@ -34,7 +34,7 @@ def make_coincap_response(items: list[dict]) -> MagicMock:
 
 @pytest.mark.django_db
 class TestCoinCapFetcherFetch:
-    def test_fetch_returns_rate_dtos(self, coincap_source_with_credential):
+    def test_fetch_returns_rate_dtos(self, coincap_source_with_credential, usd, rub, btc):
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
             {"id": "russian-ruble", "rateUsd": "0.011"},
@@ -53,7 +53,7 @@ class TestCoinCapFetcherFetch:
         assert ("RUB", "USD") in codes
         assert ("BTC", "USD") in codes
 
-    def test_fetch_cross_rate_calculation(self, coincap_source_with_credential):
+    def test_fetch_cross_rate_calculation(self, coincap_source_with_credential, usd, rub):
         """USD→RUB = rateUsd(USD) / rateUsd(RUB) = 1.0 / 0.01 = 100."""
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
@@ -68,7 +68,7 @@ class TestCoinCapFetcherFetch:
         usd_rub = next(r for r in rates if r.from_code == "USD" and r.to_code == "RUB")
         assert usd_rub.rate == Decimal("100")
 
-    def test_fetch_skips_unknown_ids(self, coincap_source_with_credential):
+    def test_fetch_skips_unknown_ids(self, coincap_source_with_credential, usd):
         """Неизвестный coincap_id не попадает в результат."""
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
@@ -98,7 +98,7 @@ class TestCoinCapFetcherFetch:
 
         assert rates == []
 
-    def test_fetch_invalid_rate_usd_skipped(self, coincap_source_with_credential):
+    def test_fetch_invalid_rate_usd_skipped(self, coincap_source_with_credential, usd):
         """Запись с невалидным rateUsd пропускается без падения."""
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "not-a-number"},
@@ -113,7 +113,7 @@ class TestCoinCapFetcherFetch:
         # USD не распознан → пар нет
         assert rates == []
 
-    def test_fetch_rate_datetime_is_timezone_aware(self, coincap_source_with_credential):
+    def test_fetch_rate_datetime_is_timezone_aware(self, coincap_source_with_credential, usd, rub):
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
             {"id": "russian-ruble", "rateUsd": "0.01"},
@@ -127,7 +127,7 @@ class TestCoinCapFetcherFetch:
         for rate in rates:
             assert rate.rate_datetime.tzinfo is not None
 
-    def test_api_key_sent_in_header(self, coincap_source_with_credential):
+    def test_api_key_sent_in_header(self, coincap_source_with_credential, usd, rub):
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
             {"id": "russian-ruble", "rateUsd": "0.01"},
@@ -163,7 +163,7 @@ class TestGetFetcher:
 
 @pytest.mark.django_db
 class TestSyncCurrencyRates:
-    def test_success(self, coincap_source_with_credential):
+    def test_success(self, coincap_source_with_credential, usd, rub):
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
             {"id": "russian-ruble", "rateUsd": "0.011"},
@@ -208,7 +208,7 @@ class TestSyncCurrencyRates:
         assert result.status == "skipped"
         assert CurrencyRateSync.objects.count() == 0
 
-    def test_failed_on_http_error(self, coincap_source_with_credential):
+    def test_failed_on_http_error(self, coincap_source_with_credential, usd, rub):
         with patch("currencies.tasks.httpx.get", side_effect=Exception("Connection refused")):
             result = sync_currency_rates(coincap_source_with_credential.id)
 
@@ -220,7 +220,7 @@ class TestSyncCurrencyRates:
         assert "Connection refused" in sync.error_log
         assert sync.finished_at is not None
 
-    def test_failed_sync_log_contains_traceback(self, coincap_source_with_credential):
+    def test_failed_sync_log_contains_traceback(self, coincap_source_with_credential, usd, rub):
         with patch("currencies.tasks.httpx.get", side_effect=ValueError("bad value")):
             sync_currency_rates(coincap_source_with_credential.id)
 
@@ -235,7 +235,7 @@ class TestSyncCurrencyRates:
 @pytest.mark.django_db
 class TestSyncAllCurrencyRates:
     def test_dispatches_to_all_active_sources(
-        self, coincap_source_with_credential, inactive_source
+        self, coincap_source_with_credential, inactive_source, usd, rub
     ):
         api_items = [
             {"id": "united-states-dollar", "rateUsd": "1.0"},
@@ -250,7 +250,7 @@ class TestSyncAllCurrencyRates:
         assert len(results) == 1
         assert results[0].status == "success"
 
-    def test_returns_list_of_sync_result_dtos(self, coincap_source_with_credential):
+    def test_returns_list_of_sync_result_dtos(self, coincap_source_with_credential, usd, rub):
         api_items = [{"id": "united-states-dollar", "rateUsd": "1.0"}]
         mock_response = make_coincap_response(api_items)
 
