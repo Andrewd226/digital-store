@@ -10,7 +10,6 @@ from currencies.models import (
     ExchangeRateHistory,
 )
 
-
 # ─── CurrencyRateSource ───────────────────────────────────────────────────────
 
 

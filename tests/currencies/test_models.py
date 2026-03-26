@@ -10,7 +10,6 @@ import pytest
 from django.utils import timezone
 
 from currencies.models import (
-    CurrencyRateSource,
     CurrencyRateSync,
     ExchangeRateHistory,
 )
