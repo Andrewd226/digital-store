@@ -1,4 +1,16 @@
+from pathlib import Path
+
+import environ
+
 from digital_store.settings import *  # noqa
+
+# ─── Environment ──────────────────────────────────────────────────────────────
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+env = environ.Env()
+environ.Env.read_env(BASE_DIR / ".env")
+
+# ─── Database (Test) ──────────────────────────────────────────────────────────
 
 DATABASES = {
     "default": {
