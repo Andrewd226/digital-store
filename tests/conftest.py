@@ -5,6 +5,7 @@ tests/conftest.py
 """
 
 from decimal import Decimal
+
 import pytest
 from django.utils import timezone
 
@@ -80,7 +81,7 @@ def coincap_source_with_credential(coincap_source):
     CurrencyRateSourceCredential.objects.create(
         source=coincap_source,
         api_key="test-api-key",
-        api_secret="",
+        api_secret="test-api-secret",
     )
     return coincap_source
 
