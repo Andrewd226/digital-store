@@ -122,8 +122,8 @@ class ExchangeRate(models.Model):
         verbose_name="В валюту",
     )
     rate = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=False,
         blank=False,
         verbose_name="Курс",
@@ -184,8 +184,8 @@ class ExchangeRateHistory(models.Model):
     snapshot_to_currency = models.TextField(verbose_name="В валюту (снимок)")
 
     rate = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=False,
         blank=False,
         verbose_name="Курс",
@@ -193,8 +193,8 @@ class ExchangeRateHistory(models.Model):
     rate_datetime = models.DateTimeField(verbose_name="Дата и время курса")
     # NULL при первой записи
     previous_rate = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=True,
         blank=True,
         verbose_name="Предыдущий курс",
