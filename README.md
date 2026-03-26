@@ -95,6 +95,7 @@ uv run python manage.py runserver
 
 # Работа с Ruff
 
+```bash
 ### Проверка кода (линтер)
 uv run ruff check .
 
@@ -109,10 +110,11 @@ uv run ruff format --check .
 
 ### Проверить конкретный файл
 uv run ruff check suppliers/models.py
-
+```
 
 # Тесты
 
+```bash
 ### Первый запуск (создаст схему таблиц)
 uv run pytest tests/ -v --create-db
 
@@ -127,3 +129,4 @@ uv run pytest tests/ -v --tb=short
 
 ### Конкретный тест
 uv run pytest tests/currencies/test_dao.py::TestExchangeRateDAOSaveRates::test_creates_new_rates -v
+```
