@@ -10,6 +10,7 @@ import pytest
 from django.utils import timezone
 
 from currencies.models import (
+    CurrencyRateSource,
     CurrencyRateSync,
     ExchangeRateHistory,
 )
@@ -129,4 +130,4 @@ class TestCurrencyRateSync:
         )
         s = str(sync)
         assert "CoinCap Test" in s
-        assert "Успешно" in s
+        assert sync.get_status_display() in s

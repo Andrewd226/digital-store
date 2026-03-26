@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from currencies.dto import SyncResultDTO
 from currencies.models import CurrencyRateSync, ExchangeRate
 from currencies.tasks import (
     CoinCapFetcher,
@@ -65,7 +66,7 @@ class TestCoinCapFetcherFetch:
             rates = fetcher.fetch()
 
         usd_rub = next(r for r in rates if r.from_code == "USD" and r.to_code == "RUB")
-        assert usd_rub.rate == pytest.approx(Decimal("100"), rel=Decimal("1e-6"))
+        assert usd_rub.rate == Decimal("100")
 
     def test_fetch_skips_unknown_ids(self, coincap_source_with_credential):
         """Неизвестный coincap_id не попадает в результат."""
@@ -85,6 +86,7 @@ class TestCoinCapFetcherFetch:
     def test_fetch_empty_ids_map_returns_empty(self, coincap_source):
         """Если ids_map пустой — возвращает пустой список без HTTP-запроса."""
         coincap_source.api_extra_config = {}
+        coincap_source.save()
         coincap_source.tracked_currencies.clear()
 
         with patch("currencies.tasks.httpx.get") as mock_get:
@@ -171,6 +173,7 @@ class TestSyncCurrencyRates:
             result = sync_currency_rates(coincap_source_with_credential.id)
 
         assert result.status == "success"
+        # 2 валюты = 2 кросс-пары (USD→RUB, RUB→USD)
         assert result.rates_updated == 2
         assert result.error is None
 
@@ -252,8 +255,6 @@ class TestSyncAllCurrencyRates:
 
         with patch("currencies.tasks.httpx.get", return_value=mock_response):
             results = sync_all_currency_rates()
-
-        from currencies.dto import SyncResultDTO
 
         assert all(isinstance(r, SyncResultDTO) for r in results)
 

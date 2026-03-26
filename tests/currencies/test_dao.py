@@ -53,7 +53,9 @@ class TestExchangeRateDAOSaveRates:
             snapshot_to_currency="RUB",
         )
         assert history.count() == 1
-        assert history.first().previous_rate is None
+        h = history.first()
+        assert h is not None
+        assert h.previous_rate is None
 
     def test_updates_existing_rates(self, coincap_source, existing_rate):
         new_rate = make_rate_dto("USD", "RUB", "95.0")
@@ -78,6 +80,7 @@ class TestExchangeRateDAOSaveRates:
             .order_by("-recorded_at")
             .first()
         )
+        assert history is not None
         assert history.previous_rate == old_rate
         assert history.rate == Decimal("95.0")
 
@@ -101,6 +104,7 @@ class TestExchangeRateDAOSaveRates:
         assert total == 0
 
     def test_bulk_create_multiple_rates(self, coincap_source, usd, rub, eur):
+        initial_count = ExchangeRateHistory.objects.count()
         rates = [
             make_rate_dto("USD", "RUB", "90.0"),
             make_rate_dto("USD", "EUR", "0.92"),
@@ -110,7 +114,7 @@ class TestExchangeRateDAOSaveRates:
 
         assert total == 3
         assert ExchangeRate.objects.filter(source=coincap_source).count() == 3
-        assert ExchangeRateHistory.objects.count() == 3
+        assert ExchangeRateHistory.objects.count() == initial_count + 3
 
     def test_chunked_save(self, coincap_source):
         """Проверяет что данные сохраняются корректно при размере батча меньше числа записей."""
@@ -129,6 +133,7 @@ class TestExchangeRateDAOSaveRates:
             ExchangeRateDAO.CHUNK_SIZE = original_chunk
 
     def test_mixed_create_and_update(self, coincap_source, existing_rate, eur):
+        initial_count = ExchangeRateHistory.objects.count()
         rates = [
             make_rate_dto("USD", "RUB", "95.0"),  # обновление
             make_rate_dto("USD", "EUR", "0.92"),  # создание
@@ -137,7 +142,7 @@ class TestExchangeRateDAOSaveRates:
 
         assert total == 2
         assert ExchangeRate.objects.filter(source=coincap_source).count() == 2
-        assert ExchangeRateHistory.objects.count() == 2
+        assert ExchangeRateHistory.objects.count() == initial_count + 2
 
 
 @pytest.mark.django_db
