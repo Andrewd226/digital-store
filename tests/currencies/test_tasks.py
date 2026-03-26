@@ -88,6 +88,7 @@ class TestCoinCapFetcherFetch:
         coincap_source.api_extra_config = {}
         coincap_source.save()
         coincap_source.tracked_currencies.clear()
+        coincap_source.refresh_from_db()
 
         with patch("currencies.tasks.httpx.get") as mock_get:
             mock_get.return_value = make_coincap_response([])

@@ -95,13 +95,14 @@ def inactive_source(db, usd):
 
 @pytest.fixture
 def existing_rate(db, coincap_source, usd, rub):
+    now = timezone.now()
     return ExchangeRate.objects.create(
         source=coincap_source,
         from_currency=usd,
         to_currency=rub,
         rate="90.000000000000000000",
-        rate_datetime=timezone.now(),
-        updated_at=timezone.now(),
+        rate_datetime=now,
+        updated_at=now,
     )
 
 
