@@ -89,6 +89,11 @@ uv run ruff check suppliers/models.py
 
 
 # Тесты
+
+### Первый запуск (создаст схему таблиц)
+uv run pytest tests/ -v --create-db
+
+### Последующие запуски (БД не пересоздаётся)
 uv run pytest tests/ -v
 
 ### Проверка импортов без запуска тестов
@@ -96,3 +101,6 @@ uv run pytest tests/ --collect-only
 
 ### Запуск с подробным выводом ошибок
 uv run pytest tests/ -v --tb=short
+
+### Конкретный тест
+uv run pytest tests/currencies/test_dao.py::TestExchangeRateDAOSaveRates::test_creates_new_rates -v
