@@ -1,3 +1,7 @@
+"""
+currencies/models.py
+"""
+
 from django.db import models
 from encrypted_fields.fields import EncryptedCharField
 
