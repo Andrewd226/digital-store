@@ -115,7 +115,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "oscar.apps.basket.middleware.BasketMiddleware",
     "django.contrib.flatpages.middleware.FlatpageFallbackMiddleware",
-    "partner.middleware.CurrencyMiddleware",
+    # "partner.middleware.CurrencyMiddleware",
 ]
 
 ROOT_URLCONF = "digital_store.urls"
