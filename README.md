@@ -131,7 +131,14 @@ uv run pytest tests/ -v --tb=short
 uv run pytest tests/currencies/test_dao.py::TestExchangeRateDAOSaveRates::test_creates_new_rates -v
 ```
 
-# Production запуск
+# запуск сервиса
 ```bash
-uv run run-prod
+# Базовый запуск (с параметрами по умолчанию)
+uv run python manage.py start
+
+# С кастомными параметрами
+uv run python manage.py start --bind 127.0.0.1:8000 --workers 4 --threads 2
+
+# Проверка помощи
+uv run python manage.py help start
 ```
