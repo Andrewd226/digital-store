@@ -6,6 +6,7 @@ Django management command для запуска production Gunicorn сервер
 
 import subprocess
 import sys
+
 from django.core.management.base import BaseCommand
 
 
@@ -47,15 +48,24 @@ class Command(BaseCommand):
         cmd = [
             "gunicorn",
             "digital_store.wsgi:application",
-            "--bind", bind,
-            "--workers", str(workers),
-            "--threads", str(threads),
-            "--timeout", str(timeout),
-            "--graceful-timeout", "30",
-            "--max-requests", "1000",
-            "--max-requests-jitter", "100",
-            "--access-logfile", "-",
-            "--error-logfile", "-",
+            "--bind",
+            bind,
+            "--workers",
+            str(workers),
+            "--threads",
+            str(threads),
+            "--timeout",
+            str(timeout),
+            "--graceful-timeout",
+            "30",
+            "--max-requests",
+            "1000",
+            "--max-requests-jitter",
+            "100",
+            "--access-logfile",
+            "-",
+            "--error-logfile",
+            "-",
         ]
 
         self.stdout.write(
