@@ -18,6 +18,7 @@ dependencies = [
     "django-tables2>=2.7",
     "pydantic>=2.12.5",
     "httpx>=0.28",
+    "gunicorn>=25.1.0",
 ]
 
 [dependency-groups]

@@ -252,9 +252,7 @@ class ExchangeRateHistoryAdmin(admin.ModelAdmin):
         if obj.delta is not None:
             color = "green" if obj.delta > 0 else "red" if obj.delta < 0 else "gray"
             sign = "+" if obj.delta > 0 else ""
-            return format_html(
-                f'<span style="color: {color};">{sign}{obj.delta:.6f}</span>'
-            )
+            return format_html(f'<span style="color: {color};">{sign}{obj.delta:.6f}</span>')
         return "—"
 
     @admin.display(description=_("Изменение %"))
@@ -262,9 +260,7 @@ class ExchangeRateHistoryAdmin(admin.ModelAdmin):
         if obj.delta_pct is not None:
             color = "green" if obj.delta_pct > 0 else "red" if obj.delta_pct < 0 else "gray"
             sign = "+" if obj.delta_pct > 0 else ""
-            return format_html(
-                f'<span style="color: {color};">{sign}{obj.delta_pct:.4f}%</span>'
-            )
+            return format_html(f'<span style="color: {color};">{sign}{obj.delta_pct:.4f}%</span>')
         return "—"
 
 
