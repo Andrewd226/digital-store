@@ -35,8 +35,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--timeout",
             type=int,
-            default=120,
-            help="Таймаут запроса в секундах (по умолчанию: 120)",
+            default=30,
+            help="Таймаут запроса в секундах (по умолчанию: 30)",
         )
 
     def handle(self, *args, **options):
