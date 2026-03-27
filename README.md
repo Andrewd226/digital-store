@@ -2,6 +2,10 @@
 
 ### Инициализировать uv в существующей директории (создаёт pyproject.toml, .python-version, .venv)
 ```bash
+# On macOS and Linux.
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+uv self update
 uv init --python 3.14
 ```
 
