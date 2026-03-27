@@ -32,11 +32,11 @@ dev = [
     "ruff>=0.15.6",
 ]
 
-[tool.uv]
-default-groups = ["dev"]
-
 [project.scripts]
 run-prod = "gunicorn digital_store.wsgi:application --bind 127.0.0.1:8000 --workers 4 --threads 2 --timeout 120 --graceful-timeout 30 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile -"
+
+[tool.uv]
+default-groups = ["dev"]
 
 # ─── Ruff ─────────────────────────────────────────────────────────────────────
 
