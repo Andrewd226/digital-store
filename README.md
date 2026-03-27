@@ -130,3 +130,8 @@ uv run pytest tests/ -v --tb=short
 ### Конкретный тест
 uv run pytest tests/currencies/test_dao.py::TestExchangeRateDAOSaveRates::test_creates_new_rates -v
 ```
+
+# Production запуск
+```bash
+uv run run-prod
+```
