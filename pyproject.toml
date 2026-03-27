@@ -33,7 +33,6 @@ dev = [
 ]
 
 [tool.uv]
-package = true
 default-groups = ["dev"]
 
 [tool.uv.scripts]
