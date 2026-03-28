@@ -135,7 +135,7 @@ uv run pytest tests/ -v --tb=short
 uv run pytest tests/currencies/test_dao.py::TestExchangeRateDAOSaveRates::test_creates_new_rates -v
 ```
 
-# запуск сервиса
+# Команды сервиса
 ```bash
 # Базовый запуск (с параметрами по умолчанию)
 uv run python manage.py start
@@ -145,4 +145,51 @@ uv run python manage.py start --bind 127.0.0.1:8000 --workers 4 --threads 2
 
 # Проверка помощи
 uv run python manage.py help start
+
+# Создать/обновить начальные данные валют и источника курсов CoinCap
+uv run python manage.py init_currencies
+```
+
+# Работа с БД PostgreSql
+### Установка и запуск CloudBeaver
+```bash
+mkdir -p /opt/cloudbeaver/data
+docker run -d --name cloudbeaver \
+    -p 127.0.0.1:8978:8978 \
+    -v /opt/cloudbeaver/data:/opt/cloudbeaver/workspace \
+    --restart unless-stopped \
+    dbeaver/cloudbeaver:latest
+
+sudo ufw deny 8978
+
+
+# Просмотр всех доступных контейнеров
+docker ps -a
+
+# Просмотр логов
+docker logs -f cloudbeaver
+
+# Остановка контейнера
+docker stop cloudbeaver
+
+# Запуск контейнера
+docker start cloudbeaver
+
+# Перезапуск контейнера
+docker restart cloudbeaver
+
+# Обновление до последней версии
+docker pull dbeaver/cloudbeaver:latest
+docker stop cloudbeaver
+docker rm cloudbeaver
+# (Запуск команды из пункта 1 заново)
+```
+
+### Подключение к БД
+```bash
+# На локальном компьютере выполнить:
+ssh -L 8978:127.0.0.1:8978 user@your_server_ip
+
+# Затем в браузере открыть:
+http://localhost:8978
 ```

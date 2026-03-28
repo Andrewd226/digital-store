@@ -1,3 +1,5 @@
+# pyproject.toml
+
 [project]
 name = "digital-store"
 version = "0.1.0"
