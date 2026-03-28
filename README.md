@@ -157,11 +157,14 @@ mkdir -p /opt/cloudbeaver/data
 docker run -d --name cloudbeaver \
     -p 127.0.0.1:8978:8978 \
     -v /opt/cloudbeaver/data:/opt/cloudbeaver/workspace \
+    --add-host=host.docker.internal:host-gateway \
     --restart unless-stopped \
     dbeaver/cloudbeaver:latest
 
-sudo ufw deny 8978
-
+ufw deny 8978  # Deny to CloudBeaver from internet
+ufw allow from 172.17.0.0/16 to any port 5432 proto tcp # allow from Docker net to Postgresql
+ufw allow from 172.17.0.0/16 to any port 6432 proto tcp # allow from Docker net to Pgbouncer
+ufw reload
 
 # Просмотр всех доступных контейнеров
 docker ps -a
@@ -177,6 +180,9 @@ docker start cloudbeaver
 
 # Перезапуск контейнера
 docker restart cloudbeaver
+
+# Подключение к контейнеру
+docker exec -it cloudbeaver bash
 
 # Обновление до последней версии
 docker pull dbeaver/cloudbeaver:latest

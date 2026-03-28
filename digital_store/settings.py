@@ -159,7 +159,10 @@ DATABASES = {
         "PASSWORD": env("DB_PASSWORD"),
         "HOST": env("DB_HOST", default="localhost"),
         "PORT": env("DB_PORT", default="5432"),
-        "CONN_MAX_AGE": 600,
+        "CONN_MAX_AGE": 0,
+        'OPTIONS': {
+            'prepared_statement_mode': False,
+        },
     }
 }
 
