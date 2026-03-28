@@ -21,7 +21,7 @@ class Currency(models.Model):
 
     # ISO 4217 для фиатных (USD, EUR), тикер для крипто (BTC, ETH)
     currency_code = models.TextField(
-        unique=True,
+        primary_key=True,
         validators=[MinLengthValidator(3)],
         verbose_name=_("Код валюты"),
     )
