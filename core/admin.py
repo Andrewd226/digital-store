@@ -20,14 +20,13 @@ class CurrencyAdmin(admin.ModelAdmin):
     list_filter = ["currency_type"]
     search_fields = ["currency_code", "name"]
     ordering = ["currency_type", "currency_code"]
-    readonly_fields = ["id"]
+    readonly_fields = ["currency_code"]
 
     fieldsets = (
         (
             _("Основное"),
             {
                 "fields": (
-                    "id",
                     "currency_code",
                     "name",
                     "currency_type",
