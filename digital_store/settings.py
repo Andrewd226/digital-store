@@ -159,9 +159,14 @@ DATABASES = {
         "PASSWORD": env("DB_PASSWORD"),
         "HOST": env("DB_HOST", default="localhost"),
         "PORT": env("DB_PORT", default="5432"),
-        "CONN_MAX_AGE": 0,
+
+        # Критично для PgBouncer в режиме transaction
+        'CONN_MAX_AGE': 0,
+        
+        # Опции psycopg
         'OPTIONS': {
-            'prepared_statement_mode': False,
+            # Отключаем подготовленные запросы (проблемы с PgBouncer)
+            'prepare_threshold': 0,
         },
     }
 }
