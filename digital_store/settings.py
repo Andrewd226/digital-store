@@ -14,6 +14,7 @@ _settings = Dynaconf(
     env_switcher="ENV_FOR_DYNACONF",
     environments=True,
     merge_enabled=True,
+    load_dotenv=True,
 )
 
 # ─── Apps ─────────────────────────────────────────────────────────────────────
