@@ -1,0 +1,74 @@
+# digital_store/settings.yaml
+
+# ─── Default (общие настройки для всех окружений) ──────────────────────────────
+
+default:
+  db:
+    engine: 'django.db.backends.postgresql'
+    host: 'localhost'
+    port: 5432
+    database: 'digital_store'
+    user: 'usersvc_digital_store'
+    password: 'usersvc_digital_store_password'
+
+    # PgBouncer настройки
+    conn_max_age: 0
+    # Опции psycopg
+    options:
+      prepare_threshold: 0
+
+  # Django Core
+  django:
+    debug: true
+    allowed_hosts:
+      - 'localhost'
+      - '127.0.0.1'
+
+    salt_key: 'VERY_SECRET_SALT_KEY'
+    secret_key: 'VERY_SECRET_SECRET_KEY'
+
+    # Security
+    secure_ssl_redirect: true
+    session_cookie_secure: true
+    csrf_cookie_secure: true
+    use_x_forwarded_host: true
+    use_x_forwarded_port: true
+
+    # Localization
+    language_code: 'en-us'
+    languages:
+      - ['en', 'English']
+      - ['ru', 'Русский']
+    time_zone: 'UTC'
+    use_i18n: true
+    use_tz: true
+
+    # Site
+    site_id: 1
+
+    # Static / Media
+    static_url: '/static/'
+    static_root: 'staticfiles'
+    staticfiles_dir: static
+    media_url: '/media/'
+    media_root: 'media'
+
+  # Modeltranslation
+  modeltranslation:
+    default_language: 'en'
+    languages:
+      - 'en'
+      - 'ru'
+
+  # Oscar
+  oscar:
+    default_currency: 'USD'
+    shop_name: 'Digital Store'
+
+# ─── Test ──────────────────────────────────────────────────────────────────────
+
+tests.local:
+  db:
+    database: 'test_digital_store'
+    user: 'test_usersvc_digital_store'
+    password: 'test_password'

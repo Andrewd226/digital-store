@@ -1,3 +1,6 @@
+"""
+digital_store/settings_test.py
+"""
 from pathlib import Path
 
 import environ
