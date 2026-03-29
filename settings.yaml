@@ -70,7 +70,7 @@ tests.local:
 
 # ─── Production ────────────────────────────────────────────────────────────────
 
-production.local:
+development.local:
   db:
     host: '@format {env[DB_HOST]}'
     port: '@format {env[DB_PORT]}'

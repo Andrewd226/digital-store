@@ -34,7 +34,7 @@ mkdir -p static staticfiles media templates
 
 ### Файл .env.example
 ```bash
-ENV_FOR_DYNACONF=production.local
+ENV_FOR_DYNACONF=development.local
 
 DB_HOST=localhost
 DB_PORT=5432
