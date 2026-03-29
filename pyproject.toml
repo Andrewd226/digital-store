@@ -26,6 +26,7 @@ dev = [
     "pytest-django>=4.8",
     "django-debug-toolbar>=6.0",
     "ruff>=0.15",
+    "pytest-env>=1.6.0",
 ]
 
 [tool.uv]
