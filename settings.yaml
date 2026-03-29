@@ -69,6 +69,5 @@ default:
 
 tests.local:
   db:
-    database: 'test_digital_store'
     user: 'test_usersvc_digital_store'
     password: 'test_password'
