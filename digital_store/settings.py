@@ -192,6 +192,7 @@ DEBUG = _settings.django.debug
 SALT_KEY = _settings.django.salt_key
 SECRET_KEY = _settings.django.secret_key
 ALLOWED_HOSTS = _settings.django.allowed_hosts
+print(ALLOWED_HOSTS)
 
 SECURE_SSL_REDIRECT = _settings.django.secure_ssl_redirect
 SESSION_COOKIE_SECURE = _settings.django.session_cookie_secure
