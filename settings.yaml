@@ -77,7 +77,7 @@ production.local:
 
   django:
     debug: false
-    allowed_hosts: @env[ALLOWED_HOSTS]
+    allowed_hosts: '@env ALLOWED_HOSTS'
 
     salt_key: '{env[SALT_KEY]}'
     secret_key: '{env[SECRET_KEY]}'
