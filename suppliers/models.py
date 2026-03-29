@@ -202,6 +202,7 @@ class SupplierStockRecord(models.Model):
     product = models.ForeignKey(
         "catalogue.Product",
         on_delete=models.PROTECT,
+        related_name="supplier_stock_records",
         verbose_name="Товар",
     )
     supplier_sku = models.TextField(
@@ -209,8 +210,8 @@ class SupplierStockRecord(models.Model):
         verbose_name="Артикул поставщика",
     )
     price = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=False,
         blank=False,
         verbose_name="Цена",
@@ -297,15 +298,15 @@ class SupplierStockHistory(models.Model):
 
     # price_before = NULL при первом создании записи
     price_before = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=True,
         blank=True,
         verbose_name="Цена до",
     )
     price_after = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=False,
         blank=False,
         verbose_name="Цена после",
