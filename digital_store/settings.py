@@ -10,7 +10,7 @@ from dynaconf import Dynaconf
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 _settings = Dynaconf(
-    settings_file=BASE_DIR / "settings.yaml",
+    # settings_file=BASE_DIR / "settings.yaml",
     environments=True,
     env_switcher="ENV_FOR_DYNACONF",
 )
