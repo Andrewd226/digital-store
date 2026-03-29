@@ -168,6 +168,7 @@ TEMPLATES = [
 ROOT_URLCONF = "digital_store.urls"
 # WSGI_APPLICATION = 'digital_store.wsgi.application'
 
+
 # ─── Database ─────────────────────────────────────────────────────────────────
 
 # Database
