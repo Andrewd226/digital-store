@@ -147,7 +147,7 @@ class SupplierStockRecordAdmin(admin.ModelAdmin):
         "is_active",
         "updated_at",
     ]
-    list_filter = ["supplier", "currency", "is_active", "product__is_available"]
+    list_filter = ["supplier", "currency", "is_active"]  # ← Исправлено: удалено product__is_available
     search_fields = [
         "product__title",
         "product__upc",
