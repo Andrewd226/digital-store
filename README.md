@@ -151,6 +151,8 @@ uv run python manage.py help start
 
 # Создать/обновить начальные данные валют и источника курсов CoinCap
 uv run python manage.py init_currencies
+
+uv run python manage.py shell -c "from currencies.tasks import sync_all_currency_rates; sync_all_currency_rates()"
 ```
 
 # Работа с БД PostgreSql
