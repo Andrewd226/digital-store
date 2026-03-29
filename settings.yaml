@@ -78,7 +78,7 @@ production.local:
     password: '@format {env[DB_PASSWORD]}'
 
   django:
-    debug: false
+    debug: true
     allowed_hosts: '@json @format {env[ALLOWED_HOSTS]}'
 
     salt_key: '@format {env[SALT_KEY]}'
