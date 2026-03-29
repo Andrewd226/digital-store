@@ -152,12 +152,8 @@ source = { virtual = "." }
 dependencies = [
     { name = "django" },
     { name = "django-fernet-encrypted-fields" },
-    { name = "django-haystack" },
     { name = "django-modeltranslation" },
     { name = "django-oscar" },
-    { name = "django-tables2" },
-    { name = "django-treebeard" },
-    { name = "django-widget-tweaks" },
     { name = "djangorestframework" },
     { name = "dynaconf", extra = ["yaml"] },
     { name = "gunicorn" },
@@ -178,22 +174,18 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "django", specifier = "~=5.2" },
-    { name = "django-fernet-encrypted-fields", specifier = "~=0.3" },
-    { name = "django-haystack", specifier = "~=3.3" },
-    { name = "django-modeltranslation", specifier = "~=0.19" },
-    { name = "django-oscar", specifier = "~=4.1" },
-    { name = "django-tables2", specifier = "~=2.7" },
-    { name = "django-treebeard", specifier = "~=4.7" },
-    { name = "django-widget-tweaks", specifier = "~=1.5" },
-    { name = "djangorestframework", specifier = "~=3.16" },
-    { name = "dynaconf", extras = ["yaml"], specifier = "~=3.2" },
-    { name = "gunicorn", specifier = "~=25.1" },
-    { name = "httpx", specifier = "~=0.28" },
-    { name = "psycopg", extras = ["binary"], specifier = "~=3.1" },
-    { name = "pydantic", specifier = "~=2.12" },
-    { name = "sorl-thumbnail", specifier = "~=12.11" },
-    { name = "whitenoise", specifier = "~=6.12" },
+    { name = "django", specifier = ">=5.2" },
+    { name = "django-fernet-encrypted-fields", specifier = ">=0.3.1,<1.0" },
+    { name = "django-modeltranslation", specifier = ">=0.19.19,<1.0" },
+    { name = "django-oscar", specifier = ">=4.1,<5.0" },
+    { name = "djangorestframework", specifier = ">=3.16.1,<4.0" },
+    { name = "dynaconf", extras = ["yaml"], specifier = ">=3.2.13,<4.0" },
+    { name = "gunicorn", specifier = ">=25.1.0,<26.0" },
+    { name = "httpx", specifier = ">=0.28.1,<1.0" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.3,<4.0" },
+    { name = "pydantic", specifier = ">=2.12.5,<3.0" },
+    { name = "sorl-thumbnail", specifier = ">=12.11.0,<13.0" },
+    { name = "whitenoise", specifier = ">=6.12.0,<7.0" },
 ]
 
 [package.metadata.requires-dev]
