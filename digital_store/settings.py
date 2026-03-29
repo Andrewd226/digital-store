@@ -213,8 +213,9 @@ OSCAR_SHOP_NAME = _settings.oscar.shop_name
 LANGUAGE_CODE = _settings.django.language_code
 LANGUAGES = _settings.django.languages
 TIME_ZONE = _settings.django.time_zone
-USE_I18N = _settings.django.use_i18n
 USE_TZ = _settings.django.use_tz
+USE_I18N = _settings.django.use_i18n
+USE_I10N = _settings.django.use_l10n
 DATETIME_FORMAT = _settings.django.datetime_format
 
 MODELTRANSLATION_DEFAULT_LANGUAGE = _settings.django.default_language
