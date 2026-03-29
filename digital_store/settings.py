@@ -9,7 +9,7 @@ from dynaconf import DjangoDynaconf
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-settings = DjangoDynaconf(
+_settings = DjangoDynaconf(
     __name__,
     SETTINGS_FILE_FOR_DYNACONF=BASE_DIR / "settings.yaml",
 )
@@ -146,63 +146,63 @@ AUTHENTICATION_BACKENDS = (
 
 DATABASES = {
     "default": {
-        "ENGINE": settings.db.engine,
-        "NAME": settings.db.database,
-        "USER": settings.db.user,
-        "PASSWORD": settings.db.password,
-        "HOST": settings.db.host,
-        "PORT": settings.db.port,
-        "CONN_MAX_AGE": settings.db.conn_max_age,
-        "OPTIONS": settings.db.options,
+        "ENGINE": _settings.db.engine,
+        "NAME": _settings.db.database,
+        "USER": _settings.db.user,
+        "PASSWORD": _settings.db.password,
+        "HOST": _settings.db.host,
+        "PORT": _settings.db.port,
+        "CONN_MAX_AGE": _settings.db.conn_max_age,
+        "OPTIONS": _settings.db.options,
     },
 }
 
 # ─── Django Core Settings ──────────────────────────────────────────────────────
 
-SITE_ID = settings.django.site_id
-DEBUG = settings.django.debug
-SALT_KEY = settings.django.salt_key
-SECRET_KEY = settings.django.secret_key
-ALLOWED_HOSTS = settings.django.allowed_hosts
+SITE_ID = _settings.django.site_id
+DEBUG = _settings.django.debug
+SALT_KEY = _settings.django.salt_key
+SECRET_KEY = _settings.django.secret_key
+ALLOWED_HOSTS = _settings.django.allowed_hosts
 
-SECURE_SSL_REDIRECT = settings.django.secure_ssl_redirect
-SESSION_COOKIE_SECURE = settings.django.session_cookie_secure
-CSRF_COOKIE_SECURE = settings.django.csrf_cookie_secure
-USE_X_FORWARDED_HOST = settings.django.use_x_forwarded_host
-USE_X_FORWARDED_PORT = settings.django.use_x_forwarded_port
+SECURE_SSL_REDIRECT = _settings.django.secure_ssl_redirect
+SESSION_COOKIE_SECURE = _settings.django.session_cookie_secure
+CSRF_COOKIE_SECURE = _settings.django.csrf_cookie_secure
+USE_X_FORWARDED_HOST = _settings.django.use_x_forwarded_host
+USE_X_FORWARDED_PORT = _settings.django.use_x_forwarded_port
 
 # ─── Oscar ─────────────────────────────────────────────────────────────────────
 
-OSCAR_DEFAULT_CURRENCY = settings.oscar.default_currency
-OSCAR_SHOP_NAME = settings.oscar.shop_name
+OSCAR_DEFAULT_CURRENCY = _settings.oscar.default_currency
+OSCAR_SHOP_NAME = _settings.oscar.shop_name
 
 # ─── Localization ──────────────────────────────────────────────────────────────
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = settings.django.language_code
-LANGUAGES = settings.django.languages
-TIME_ZONE = settings.django.time_zone
-USE_I18N = settings.django.use_i18n
-USE_TZ = settings.django.use_tz
+LANGUAGE_CODE = _settings.django.language_code
+LANGUAGES = _settings.django.languages
+TIME_ZONE = _settings.django.time_zone
+USE_I18N = _settings.django.use_i18n
+USE_TZ = _settings.django.use_tz
 
 # ─── Modeltranslation ──────────────────────────────────────────────────────────
 
-MODELTRANSLATION_DEFAULT_LANGUAGE = settings.modeltranslation.default_language
-MODELTRANSLATION_LANGUAGES = tuple(settings.modeltranslation.languages)
+MODELTRANSLATION_DEFAULT_LANGUAGE = _settings.modeltranslation.default_language
+MODELTRANSLATION_LANGUAGES = tuple(_settings.modeltranslation.languages)
 
 # ─── Static / Media ───────────────────────────────────────────────────────────
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = settings.django.static_url
-STATIC_ROOT = BASE_DIR / settings.django.static_root
-STATICFILES_DIRS = [BASE_DIR / settings.django.staticfiles_dir]
+STATIC_URL = _settings.django.static_url
+STATIC_ROOT = BASE_DIR / _settings.django.static_root
+STATICFILES_DIRS = [BASE_DIR / _settings.django.staticfiles_dir]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-MEDIA_URL = settings.django.media_url
-MEDIA_ROOT = BASE_DIR / settings.django.media_root
+MEDIA_URL = _settings.django.media_url
+MEDIA_ROOT = BASE_DIR / _settings.django.media_root
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
