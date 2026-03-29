@@ -138,6 +138,8 @@ uv run pytest tests/currencies/test_dao.py::TestExchangeRateDAOSaveRates::test_c
 
 # Команды сервиса
 ```bash
+uv run python manage.py createsuperuser
+
 # Базовый запуск (с параметрами по умолчанию)
 uv run python manage.py start
 
