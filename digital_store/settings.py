@@ -9,11 +9,11 @@ from dynaconf import DjangoDynaconf
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-_settings = DjangoDynaconf(
-    __name__,
-    SETTINGS_FILE_FOR_DYNACONF=BASE_DIR / "settings.yaml",
+_settings = Dynaconf(
+    settings_file=BASE_DIR / "settings.yaml",
+    environments=True,
+    env_switcher="ENV_FOR_DYNACONF",
 )
-_settings.configure()
 
 # ─── Apps ─────────────────────────────────────────────────────────────────────
 
