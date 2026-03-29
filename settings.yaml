@@ -36,7 +36,7 @@ default:
 
     # Localization and modeltranslation
     default_language: 'en'
-    language_code: 'en-us'
+    language_code: 'ru-ru'
     languages:
       - ['en', 'English']
       - ['ru', 'Русский']
