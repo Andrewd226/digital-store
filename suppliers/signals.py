@@ -1,6 +1,8 @@
 """
 suppliers/signals.py
 """
+
+
 def sync_master_stock_on_supplier_change(sender, instance, **kwargs):
     """
     При каждом сохранении SupplierStockRecord пересчитываем

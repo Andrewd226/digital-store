@@ -3,7 +3,9 @@ digital_store/settings.py
 
 Django settings for digital_store project using Django 5.2.
 """
+
 from pathlib import Path
+
 from dynaconf import Dynaconf
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
