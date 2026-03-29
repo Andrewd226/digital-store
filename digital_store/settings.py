@@ -11,8 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 settings = DjangoDynaconf(
     __name__,
-    SETTINGS_FILE_FOR_DYNACONF=BASE_DIR / "settings.yaml",
-    lowercase_read=True,
+    # SETTINGS_FILE_FOR_DYNACONF=BASE_DIR / "settings.yaml",
+    # lowercase_read=True,
 )
 
 # ─── Apps ─────────────────────────────────────────────────────────────────────
