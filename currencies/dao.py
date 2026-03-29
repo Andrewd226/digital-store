@@ -77,7 +77,7 @@ class ExchangeRateDAO:
                 )
                 continue
 
-            key = (from_currency.id, to_currency.id)
+            key = (from_currency.currency_code, to_currency.currency_code)
             existing = existing_map.get(key)
 
             if existing:
