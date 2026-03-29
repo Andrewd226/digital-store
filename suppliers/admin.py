@@ -8,10 +8,10 @@ from django.utils.translation import gettext_lazy as _
 
 from suppliers.models import (
     Supplier,
-    SupplierCredential,
     SupplierCatalogSync,
-    SupplierStockRecord,
+    SupplierCredential,
     SupplierStockHistory,
+    SupplierStockRecord,
 )
 
 # ─── Supplier ─────────────────────────────────────────────────────────────────
@@ -147,7 +147,11 @@ class SupplierStockRecordAdmin(admin.ModelAdmin):
         "is_active",
         "updated_at",
     ]
-    list_filter = ["supplier", "currency", "is_active"]  # ← Исправлено: удалено product__is_available
+    list_filter = [
+        "supplier",
+        "currency",
+        "is_active",
+    ]  # ← Исправлено: удалено product__is_available
     search_fields = [
         "product__title",
         "product__upc",
@@ -331,7 +335,9 @@ class SupplierStockHistoryAdmin(admin.ModelAdmin):
     @admin.display(description=_("Изменение цены %"))
     def price_delta_pct_display(self, obj):
         if obj.price_delta_pct is not None:
-            color = "green" if obj.price_delta_pct > 0 else "red" if obj.price_delta_pct < 0 else "gray"
+            color = (
+                "green" if obj.price_delta_pct > 0 else "red" if obj.price_delta_pct < 0 else "gray"
+            )
             sign = "+" if obj.price_delta_pct > 0 else ""
             return format_html(
                 f'<span style="color: {color};">{sign}{obj.price_delta_pct:.2f}%</span>'

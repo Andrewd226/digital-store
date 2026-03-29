@@ -4,6 +4,7 @@ suppliers/models.py
 
 from django.db import models
 from encrypted_fields.fields import EncryptedCharField
+
 from helpers.arithmetic import round_decimal
 
 # ─── 1.1 Supplier ─────────────────────────────────────────────────────────────
@@ -366,5 +367,7 @@ class SupplierStockHistory(models.Model):
     @property
     def price_delta_pct(self):
         if self.price_before and self.price_before > 0:
-            return round_decimal((self.price_after - self.price_before) / self.price_before * 100, 2)
+            return round_decimal(
+                (self.price_after - self.price_before) / self.price_before * 100, 2
+            )
         return None

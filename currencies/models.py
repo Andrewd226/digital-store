@@ -4,6 +4,7 @@ currencies/models.py
 
 from django.db import models
 from encrypted_fields.fields import EncryptedCharField
+
 from helpers.arithmetic import round_decimal
 
 # ─── 2.1 CurrencyRateSource ───────────────────────────────────────────────────
