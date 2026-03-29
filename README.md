@@ -34,17 +34,18 @@ mkdir -p static staticfiles media templates
 
 ### Файл .env.example
 ```bash
-SECRET_KEY=
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+ENV_FOR_DYNACONF=production.local
 
+DB_HOST=localhost
+DB_PORT=5432
 DB_NAME=digital_store
 DB_USER=usersvc_digital_store
 DB_PASSWORD=
-DB_HOST=localhost
-DB_PORT=5432
+
+ALLOWED_HOSTS=['localhost', '127.0.0.1']
 
 SALT_KEY=
+SECRET_KEY=
 ```
 
 ### Файл .env
