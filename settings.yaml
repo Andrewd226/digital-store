@@ -43,6 +43,7 @@ default:
     time_zone: 'UTC'
     use_i18n: true
     use_tz: true
+    datetime_format: '%Y-%m-%d %H:%M:%S'
 
     # Site
     site_id: 1

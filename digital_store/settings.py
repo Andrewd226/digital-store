@@ -215,6 +215,7 @@ LANGUAGES = _settings.django.languages
 TIME_ZONE = _settings.django.time_zone
 USE_I18N = _settings.django.use_i18n
 USE_TZ = _settings.django.use_tz
+DATETIME_FORMAT = _settings.django.datetime_format
 
 MODELTRANSLATION_DEFAULT_LANGUAGE = _settings.django.default_language
 MODELTRANSLATION_LANGUAGES = tuple(item[0] for item in _settings.django.languages)
