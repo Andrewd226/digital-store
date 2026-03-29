@@ -111,8 +111,7 @@ DATABASES = {
         "PORT": settings.db.port,
         "CONN_MAX_AGE": settings.db.conn_max_age,
         "OPTIONS": settings.db.options,
-        },
-    }
+    },
 }
 
 
