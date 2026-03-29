@@ -4,6 +4,7 @@ currencies/models.py
 
 from django.db import models
 from encrypted_fields.fields import EncryptedCharField
+from helpers.arithmetic import round_decimal
 
 # ─── 2.1 CurrencyRateSource ───────────────────────────────────────────────────
 
@@ -238,7 +239,7 @@ class ExchangeRateHistory(models.Model):
     @property
     def delta_pct(self):
         if self.previous_rate and self.previous_rate > 0:
-            return round(float(self.rate - self.previous_rate) / float(self.previous_rate) * 100, 4)
+            return round_decimal((self.rate - self.previous_rate) / self.previous_rate * 100, 2)
         return None
 
 

@@ -4,6 +4,7 @@ suppliers/models.py
 
 from django.db import models
 from encrypted_fields.fields import EncryptedCharField
+from helpers.arithmetic import round_decimal
 
 # ─── 1.1 Supplier ─────────────────────────────────────────────────────────────
 
@@ -203,6 +204,7 @@ class SupplierStockRecord(models.Model):
     product = models.ForeignKey(
         "catalogue.Product",
         on_delete=models.PROTECT,
+        related_name="supplier_stock_records",
         verbose_name="Товар",
     )
     supplier_sku = models.TextField(
@@ -210,8 +212,8 @@ class SupplierStockRecord(models.Model):
         verbose_name="Артикул поставщика",
     )
     price = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=False,
         blank=False,
         verbose_name="Цена",
@@ -298,15 +300,15 @@ class SupplierStockHistory(models.Model):
 
     # price_before = NULL при первом создании записи
     price_before = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=True,
         blank=True,
         verbose_name="Цена до",
     )
     price_after = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=False,
         blank=False,
         verbose_name="Цена после",
@@ -364,7 +366,5 @@ class SupplierStockHistory(models.Model):
     @property
     def price_delta_pct(self):
         if self.price_before and self.price_before > 0:
-            return round(
-                float(self.price_after - self.price_before) / float(self.price_before) * 100, 2
-            )
+            return round_decimal((self.price_after - self.price_before) / self.price_before * 100, 2)
         return None
