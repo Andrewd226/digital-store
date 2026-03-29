@@ -9,7 +9,10 @@ from dynaconf import DjangoDynaconf
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-settings = DjangoDynaconf(__name__)
+settings = DjangoDynaconf(
+    __name__,
+    SETTINGS_FILE_FOR_DYNACONF=BASE_DIR / "settings.yaml",
+)
 
 # ─── Apps ─────────────────────────────────────────────────────────────────────
 
@@ -73,10 +76,6 @@ INSTALLED_APPS = [
     "currencies",
 ]
 
-HAYSTACK_CONNECTIONS = {
-    "default": {"ENGINE": "haystack.backends.simple_backend.SimpleEngine"},
-}
-
 # ─── Middleware ───────────────────────────────────────────────────────────────
 
 MIDDLEWARE = [
@@ -93,27 +92,25 @@ MIDDLEWARE = [
     # "partner.middleware.CurrencyMiddleware",
 ]
 
-# WSGI_APPLICATION = 'digital_store.wsgi.application'
+# ─── Haystack ──────────────────────────────────────────────────────────────────
 
-
-# ─── Database ─────────────────────────────────────────────────────────────────
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-DATABASES = {
-    "default": {
-        "ENGINE": settings.db.engine,
-        "NAME": settings.db.database,
-        "USER": settings.db.user,
-        "PASSWORD": settings.db.password,
-        "HOST": settings.db.host,
-        "PORT": settings.db.port,
-        "CONN_MAX_AGE": settings.db.conn_max_age,
-        "OPTIONS": settings.db.options,
-    },
+HAYSTACK_CONNECTIONS = {
+    "default": {"ENGINE": "haystack.backends.simple_backend.SimpleEngine"},
 }
 
+# ─── DRF ───────────────────────────────────────────────────────────────────────
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+}
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────-
 
@@ -140,6 +137,26 @@ AUTHENTICATION_BACKENDS = (
 #     },
 # ]
 
+# WSGI_APPLICATION = 'digital_store.wsgi.application'
+
+# ─── Database ─────────────────────────────────────────────────────────────────
+
+# Database
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+DATABASES = {
+    "default": {
+        "ENGINE": settings.db.engine,
+        "NAME": settings.db.database,
+        "USER": settings.db.user,
+        "PASSWORD": settings.db.password,
+        "HOST": settings.db.host,
+        "PORT": settings.db.port,
+        "CONN_MAX_AGE": settings.db.conn_max_age,
+        "OPTIONS": settings.db.options,
+    },
+}
+
 # ─── Django Core Settings ──────────────────────────────────────────────────────
 
 SITE_ID = settings.django.site_id
@@ -153,6 +170,11 @@ SESSION_COOKIE_SECURE = settings.django.session_cookie_secure
 CSRF_COOKIE_SECURE = settings.django.csrf_cookie_secure
 USE_X_FORWARDED_HOST = settings.django.use_x_forwarded_host
 USE_X_FORWARDED_PORT = settings.django.use_x_forwarded_port
+
+# ─── Oscar ─────────────────────────────────────────────────────────────────────
+
+OSCAR_DEFAULT_CURRENCY = settings.oscar.default_currency
+OSCAR_SHOP_NAME = settings.oscar.shop_name
 
 # ─── Localization ──────────────────────────────────────────────────────────────
 
@@ -170,7 +192,6 @@ USE_TZ = settings.django.use_tz
 MODELTRANSLATION_DEFAULT_LANGUAGE = settings.modeltranslation.default_language
 MODELTRANSLATION_LANGUAGES = tuple(settings.modeltranslation.languages)
 
-
 # ─── Static / Media ───────────────────────────────────────────────────────────
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -187,31 +208,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
-
-
-# ─── Haystack ──────────────────────────────────────────────────────────────────
-
-HAYSTACK_CONNECTIONS = settings.haystack
-
-# ─── DRF ───────────────────────────────────────────────────────────────────────
-
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
-    ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
-}
-
-# ─── Oscar ─────────────────────────────────────────────────────────────────────
-
-OSCAR_DEFAULT_CURRENCY = settings.oscar.default_currency
-OSCAR_SHOP_NAME = settings.oscar.shop_name
 
 # ─── Oscar defaults ────────────────────────────────────────────────────────────
 
