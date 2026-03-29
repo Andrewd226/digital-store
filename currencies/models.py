@@ -115,11 +115,13 @@ class ExchangeRate(models.Model):
     from_currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
+        related_name="rates_from_currency",
         verbose_name="Из валюты",
     )
     to_currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
+        related_name="rates_to_currency",
         verbose_name="В валюту",
     )
     rate = models.DecimalField(
