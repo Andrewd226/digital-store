@@ -13,6 +13,7 @@ _settings = DjangoDynaconf(
     __name__,
     SETTINGS_FILE_FOR_DYNACONF=BASE_DIR / "settings.yaml",
 )
+_settings.configure()
 
 # ─── Apps ─────────────────────────────────────────────────────────────────────
 
