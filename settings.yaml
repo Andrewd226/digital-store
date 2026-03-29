@@ -70,14 +70,14 @@ tests.local:
 
 production.local:
   db:
-    host: '{env[DB_HOST]}'
-    port: '{env[DB_PORT]}'
-    user: '{env[DB_USER]}'
-    password: '{env[DB_PASSWORD]}'
+    host: '@format {env[DB_HOST]}'
+    port: '@format {env[DB_PORT]}'
+    user: '@format {env[DB_USER]}'
+    password: '@format {env[DB_PASSWORD]}'
 
   django:
     debug: false
-    allowed_hosts: '{env[ALLOWED_HOSTS]}'
+    allowed_hosts: '@format {env[ALLOWED_HOSTS]}'
 
-    salt_key: '{env[SALT_KEY]}'
-    secret_key: '{env[SECRET_KEY]}'
+    salt_key: '@format {env[SALT_KEY]}'
+    secret_key: '@format {env[SECRET_KEY]}'
