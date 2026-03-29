@@ -10,7 +10,9 @@ from dynaconf import Dynaconf
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 _settings = Dynaconf(
-    settings_file=BASE_DIR / "settings.yaml",
+    root_path=BASE_DIR,
+    settings_file=["settings.yaml", "settings.local.yaml"],
+    # settings_file=BASE_DIR / "settings.yaml",
     env_switcher="ENV_FOR_DYNACONF",
     environments=True,
     merge_enabled=True,
@@ -202,7 +204,7 @@ USE_X_FORWARDED_PORT = _settings.django.use_x_forwarded_port
 OSCAR_DEFAULT_CURRENCY = _settings.oscar.default_currency
 OSCAR_SHOP_NAME = _settings.oscar.shop_name
 
-# ─── Localization ──────────────────────────────────────────────────────────────
+# ─── Localization and modeltranslation ─────────────────────────────────────────
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -213,10 +215,8 @@ TIME_ZONE = _settings.django.time_zone
 USE_I18N = _settings.django.use_i18n
 USE_TZ = _settings.django.use_tz
 
-# ─── Modeltranslation ──────────────────────────────────────────────────────────
-
-MODELTRANSLATION_DEFAULT_LANGUAGE = _settings.modeltranslation.default_language
-MODELTRANSLATION_LANGUAGES = tuple(_settings.modeltranslation.languages)
+MODELTRANSLATION_DEFAULT_LANGUAGE = _settings.django.default_language
+MODELTRANSLATION_LANGUAGES = tuple(item[0] for item in _settings.django.languages)
 
 # ─── Static / Media ───────────────────────────────────────────────────────────
 # Static files (CSS, JavaScript, Images)

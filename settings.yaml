@@ -1,6 +1,6 @@
 # digital_store/settings.yaml
 
-# ─── Default (общие настройки для всех окружений) ──────────────────────────────
+# ─── Default ──────────────────────────────
 
 default:
   db:
@@ -11,9 +11,9 @@ default:
     user: 'usersvc_digital_store'
     password: 'usersvc_digital_store_password'
 
-    # PgBouncer настройки
+    # PgBouncer
     conn_max_age: 0
-    # Опции psycopg
+    # Psycopg
     options:
       prepare_threshold: 0
 
@@ -34,7 +34,8 @@ default:
     use_x_forwarded_host: true
     use_x_forwarded_port: true
 
-    # Localization
+    # Localization and modeltranslation
+    default_language: 'en'
     language_code: 'en-us'
     languages:
       - ['en', 'English']
@@ -53,13 +54,6 @@ default:
     media_url: '/media/'
     media_root: 'media'
 
-  # Modeltranslation
-  modeltranslation:
-    default_language: 'en'
-    languages:
-      - 'en'
-      - 'ru'
-
   # Oscar
   oscar:
     default_currency: 'USD'
@@ -71,3 +65,19 @@ tests.local:
   db:
     user: 'test_usersvc_digital_store'
     password: 'test_password'
+
+# ─── Production ────────────────────────────────────────────────────────────────
+
+production.local:
+  db:
+    host: '{env[DB_HOST]}'
+    port: '{env[DB_PORT]}'
+    user: '{env[DB_USER]}'
+    password: '{env[DB_PASSWORD]}'
+
+  django:
+    debug: false
+    allowed_hosts: {env[ALLOWED_HOSTS]}
+
+    salt_key: '{env[SALT_KEY]}'
+    secret_key: '{env[SECRET_KEY]}'
