@@ -1,3 +1,6 @@
+"""
+catalogue/models.py
+"""
 from django.db import models
 from oscar.apps.catalogue.abstract_models import AbstractProduct
 
@@ -102,8 +105,8 @@ class MasterStockRecord(models.Model):
     last_sync = models.ForeignKey(
         "MasterCatalogSync",
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
+        null=False,
+        blank=False,
         verbose_name="Последняя синхронизация",
     )
 
@@ -168,31 +171,30 @@ class MasterPrice(models.Model):
     currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
-        related_name="master_prices",
         verbose_name="Валюта",
     )
     # Из какого SupplierStockRecord взята цена
     source_stock_record = models.ForeignKey(
         "suppliers.SupplierStockRecord",
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
+        null=False,
+        blank=False,
         related_name="used_as_master_price",
         verbose_name="Источник цены (поставщик)",
     )
     # FK на курс + денормализованный снимок значения курса
     applied_exchange_rate = models.ForeignKey(
-        "currencies.ExchangeRate",
+        "currencies.ExchangeRateHistory",
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
+        null=False,
+        blank=False,
         verbose_name="Применённый курс (FK)",
     )
     applied_rate_value = models.DecimalField(
         max_digits=18,
         decimal_places=18,
-        null=True,
-        blank=True,
+        null=False,
+        blank=False,
         verbose_name="Значение курса на момент пересчёта",
         help_text="Денормализованный снимок — не меняется при обновлении курса",
     )
@@ -200,8 +202,8 @@ class MasterPrice(models.Model):
     last_sync = models.ForeignKey(
         "MasterCatalogSync",
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
+        null=False,
+        blank=False,
         verbose_name="Последняя синхронизация",
     )
 

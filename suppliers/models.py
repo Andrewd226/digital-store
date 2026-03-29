@@ -46,9 +46,8 @@ class Supplier(models.Model):
     default_currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="default_for_suppliers",
+        null=False,
+        blank=False,
         verbose_name="Валюта по умолчанию",
     )
     sync_schedule = models.TextField(
@@ -203,7 +202,6 @@ class SupplierStockRecord(models.Model):
     product = models.ForeignKey(
         "catalogue.Product",
         on_delete=models.PROTECT,
-        related_name="supplier_stock_records",
         verbose_name="Товар",
     )
     supplier_sku = models.TextField(
@@ -220,19 +218,10 @@ class SupplierStockRecord(models.Model):
     currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
-        related_name="supplier_stock_records",
         verbose_name="Валюта",
     )
     num_in_stock = models.PositiveIntegerField(default=0, verbose_name="На складе")
     num_allocated = models.PositiveIntegerField(default=0, verbose_name="Зарезервировано")
-    last_sync = models.ForeignKey(
-        "SupplierCatalogSync",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="updated_stock_records",
-        verbose_name="Последняя синхронизация",
-    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создано")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлено")
     is_active = models.BooleanField(

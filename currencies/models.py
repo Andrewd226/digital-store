@@ -30,7 +30,6 @@ class CurrencyRateSource(models.Model):
     base_currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
-        related_name="base_for_sources",
         verbose_name="Базовая валюта",
         help_text="У ЦБ РФ — RUB, у ECB — EUR",
     )
@@ -116,13 +115,11 @@ class ExchangeRate(models.Model):
     from_currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
-        related_name="rates_from",
         verbose_name="Из валюты",
     )
     to_currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
-        related_name="rates_to",
         verbose_name="В валюту",
     )
     rate = models.DecimalField(
