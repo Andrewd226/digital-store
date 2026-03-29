@@ -12,7 +12,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 _settings = Dynaconf(
     root_path=BASE_DIR,
     settings_file=["settings.yaml", "settings.local.yaml"],
-    # settings_file=BASE_DIR / "settings.yaml",
     env_switcher="ENV_FOR_DYNACONF",
     environments=True,
     merge_enabled=True,
