@@ -7,9 +7,9 @@ Data Transfer Objects для передачи данных между слоям
 from decimal import Decimal
 from typing import Annotated, Any
 
-from helpers.arithmetic import round_decimal
-
 from pydantic import BaseModel, ConfigDict, Field
+
+from helpers.arithmetic import round_decimal
 
 
 # ─── Config ───────────────────────────────────────────────────────────────────
@@ -96,8 +96,8 @@ class SyncStatsDTO(BaseModel):
     @property
     def success_rate(self) -> Decimal:
         if self.total == 0:
-            return Decimal('0.0')
-        return round_decimal(Decimal(str((self.created + self.updated) / self.total) * 100), 2)
+            return Decimal("0.0")
+        return round_decimal(Decimal(str((self.created + self.updated) / self.total)) * 100, 2)
 
     @property
     def has_errors(self) -> bool:

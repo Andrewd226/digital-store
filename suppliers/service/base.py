@@ -7,17 +7,16 @@ suppliers/service/base.py
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from django.db import transaction
 from django.utils import timezone
 
-from suppliers.service.dto import SyncStatsDTO
 from suppliers.models import Supplier, SupplierCatalogSync
+from suppliers.service.dto import SyncStatsDTO
 
 logger = logging.getLogger(__name__)
 
-# Типы для дженериков
 TDTO = TypeVar("TDTO")
 TResult = TypeVar("TResult")
 
@@ -25,7 +24,7 @@ TResult = TypeVar("TResult")
 class BaseService(ABC, Generic[TDTO, TResult]):
     """
     Базовый класс для всех сервисов.
-    
+
     Предоставляет:
     - Транзакционность операций
     - Логирование
@@ -35,12 +34,12 @@ class BaseService(ABC, Generic[TDTO, TResult]):
 
     def __init__(self, supplier: Supplier):
         self.supplier = supplier
-        self.sync_record: Optional[SupplierCatalogSync] = None
+        self.sync_record: SupplierCatalogSync | None = None
         self.stats = SyncStatsDTO()
-        self.errors: List[str] = []
+        self.errors: list[str] = []
 
     @abstractmethod
-    def fetch_data(self) -> List[TDTO]:
+    def fetch_data(self) -> list[TDTO]:
         """
         Загружает данные от источника.
         Должен быть реализован в наследнике.
@@ -48,7 +47,7 @@ class BaseService(ABC, Generic[TDTO, TResult]):
         raise NotImplementedError("Метод fetch_data должен быть реализован в наследнике")
 
     @abstractmethod
-    def process_item(self,  TDTO) -> TResult:
+    def process_item(self, item: TDTO) -> TResult:
         """
         Обрабатывает один элемент данных.
         Должен быть реализован в наследнике.
@@ -64,15 +63,18 @@ class BaseService(ABC, Generic[TDTO, TResult]):
             supplier=self.supplier,
             status=SupplierCatalogSync.Status.RUNNING,
             triggered_by=triggered_by,
-            started_at=timezone.now(),
         )
-        logger.info(f"Начало синхронизации для поставщика {self.supplier.name} (ID={self.supplier.id})")
+        logger.info(
+            "Начало синхронизации для поставщика %s (ID=%s)",
+            self.supplier.name,
+            self.supplier.id,
+        )
         return self.sync_record
 
     @transaction.atomic
     def complete_sync(
         self,
-        status: Optional[str] = None,
+        status: str | None = None,
         error_log: str = "",
     ) -> SupplierCatalogSync:
         """
@@ -81,7 +83,6 @@ class BaseService(ABC, Generic[TDTO, TResult]):
         if not self.sync_record:
             raise RuntimeError("Синхронизация не была начата. Вызовите start_sync()")
 
-        # Определяем статус
         if status is None:
             if self.stats.failed == 0:
                 status = SupplierCatalogSync.Status.SUCCESS
@@ -98,22 +99,28 @@ class BaseService(ABC, Generic[TDTO, TResult]):
         self.sync_record.skipped_items = self.stats.skipped
         self.sync_record.failed_items = self.stats.failed
         self.sync_record.error_log = error_log[:65535] if error_log else ""
-        self.sync_record.save(update_fields=[
-            "status",
-            "finished_at",
-            "total_items",
-            "created_items",
-            "updated_items",
-            "skipped_items",
-            "failed_items",
-            "error_log",
-        ])
+        self.sync_record.save(
+            update_fields=[
+                "status",
+                "finished_at",
+                "total_items",
+                "created_items",
+                "updated_items",
+                "skipped_items",
+                "failed_items",
+                "error_log",
+            ]
+        )
 
         logger.info(
-            f"Завершение синхронизации для {self.supplier.name}: "
-            f"статус={status}, всего={self.stats.total}, "
-            f"создано={self.stats.created}, обновлено={self.stats.updated}, "
-            f"ошибок={self.stats.failed}"
+            "Завершение синхронизации для %s: статус=%s, всего=%s, "
+            "создано=%s, обновлено=%s, ошибок=%s",
+            self.supplier.name,
+            status,
+            self.stats.total,
+            self.stats.created,
+            self.stats.updated,
+            self.stats.failed,
         )
 
         return self.sync_record
@@ -124,35 +131,34 @@ class BaseService(ABC, Generic[TDTO, TResult]):
         Шаблонный метод (Template Method Pattern).
         """
         try:
-            # Начинаем синхронизацию
             self.start_sync(triggered_by=triggered_by)
 
-            # Загружаем данные
             items = self.fetch_data()
             self.stats.total = len(items)
 
-            logger.debug(f"Загружено {len(items)} элементов для поставщика {self.supplier.name}")
+            logger.debug(
+                "Загружено %d элементов для поставщика %s",
+                len(items),
+                self.supplier.name,
+            )
 
-            # Обрабатываем каждый элемент
             for item in items:
                 try:
                     result = self.process_item(item)
                     self._update_stats(result)
                 except Exception as e:
                     self.stats.failed += 1
-                    error_msg = f"{getattr(item, 'supplier_sku', 'unknown')}: {str(e)}"
+                    error_msg = f"{getattr(item, 'supplier_sku', 'unknown')}: {e}"
                     self.errors.append(error_msg)
-                    logger.error(f"Ошибка обработки элемента: {error_msg}")
+                    logger.error("Ошибка обработки элемента: %s", error_msg)
 
-            # Завершаем синхронизацию
             self.complete_sync(error_log="\n".join(self.errors))
 
         except Exception as e:
-            # Критическая ошибка
-            logger.exception(f"Критическая ошибка синхронизации: {str(e)}")
+            logger.exception("Критическая ошибка синхронизации: %s", e)
             self.complete_sync(
                 status=SupplierCatalogSync.Status.FAILED,
-                error_log=f"CRITICAL: {str(e)}",
+                error_log=f"CRITICAL: {e}",
             )
             raise
 
