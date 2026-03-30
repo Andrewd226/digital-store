@@ -7,8 +7,6 @@ suppliers/service/sync.py
 import logging
 from decimal import Decimal
 
-from django.db import transaction
-
 from helpers.arithmetic import round_decimal
 from suppliers.models import (
     Supplier,
@@ -35,8 +33,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         """
         Обрабатывает один товар: создаёт или обновляет запись, ведёт историю.
         """
-        from catalogue.models import Product
-        from core.models import Currency
 
         result = SyncResultDTO(supplier_sku=item.supplier_sku)
 
@@ -112,7 +108,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
 
         return result
 
-    def _get_currency(self, currency_code: str) -> "Currency | None":
+    def _get_currency(self, currency_code: str) -> Currency | None:
         """Получает валюту по коду."""
         from core.models import Currency
 
@@ -122,7 +118,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
             logger.warning("Валюта не найдена: %s", currency_code)
             return None
 
-    def _get_product(self, upc: str | None) -> "Product | None":
+    def _get_product(self, upc: str | None) -> Product | None:
         """Получает товар по UPC."""
         from catalogue.models import Product
 
@@ -132,10 +128,10 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
 
     def _get_or_create_stock_record(
         self,
-        product: "Product",
+        product: Product,
         supplier_sku: str,
         price: Decimal,
-        currency: "Currency",
+        currency: Currency,
         num_in_stock: int,
     ) -> tuple[SupplierStockRecord, bool]:
         """Находит или создаёт запись остатка."""
@@ -157,7 +153,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         price: Decimal,
         supplier_sku: str,
         num_in_stock: int,
-        currency: "Currency",
+        currency: Currency,
     ) -> None:
         """Обновляет запись остатка."""
         stock_record.price = price
@@ -307,9 +303,7 @@ def get_sync_service(
             raise ValueError("Для ручной синхронизации необходимо передать products_data")
         return ManualSupplierSyncService(supplier, products_data)
     else:
-        raise NotImplementedError(
-            f"Метод синхронизации {supplier.sync_method} ещё не реализован"
-        )
+        raise NotImplementedError(f"Метод синхронизации {supplier.sync_method} ещё не реализован")
 
 
 # ─── Helper Functions ─────────────────────────────────────────────────────────

@@ -9,19 +9,18 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
+from catalogue.models import Product
 from core.models import Currency
 from currencies.models import (
     CurrencyRateSource,
     CurrencyRateSourceCredential,
     ExchangeRate,
 )
-from catalogue.models import Product
 from suppliers.models import (
     Supplier,
     SupplierCredential,
     SupplierStockRecord,
 )
-
 
 # ─── Currency Fixtures ────────────────────────────────────────────────────────
 

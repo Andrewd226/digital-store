@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from helpers.arithmetic import round_decimal
 
-
 # ─── Config ───────────────────────────────────────────────────────────────────
 
 DTOConfig = ConfigDict(
