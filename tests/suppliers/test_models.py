@@ -12,12 +12,11 @@ from django.utils import timezone
 
 from suppliers.models import (
     Supplier,
-    SupplierCredential,
     SupplierCatalogSync,
-    SupplierStockRecord,
+    SupplierCredential,
     SupplierStockHistory,
+    SupplierStockRecord,
 )
-
 
 # ─── Supplier Model Tests ─────────────────────────────────────────────────────
 

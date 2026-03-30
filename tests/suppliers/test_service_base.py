@@ -4,14 +4,11 @@ tests/suppliers/test_service_base.py
 Тесты для базового сервиса синхронизации.
 """
 
-from unittest.mock import Mock, patch
-
 import pytest
 
-from suppliers.service.dto import SupplierProductDTO, SyncResultDTO, SyncStatsDTO
-from suppliers.service.base import BaseService
 from suppliers.models import Supplier, SupplierCatalogSync
-
+from suppliers.service.base import BaseService
+from suppliers.service.dto import SupplierProductDTO, SyncResultDTO, SyncStatsDTO
 
 # ─── Mock Service for Testing ─────────────────────────────────────────────────
 

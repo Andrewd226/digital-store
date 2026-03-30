@@ -5,25 +5,23 @@ tests/suppliers/test_service_sync.py
 """
 
 from decimal import Decimal
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 import pytest
 
-from suppliers.service.dto import SupplierProductDTO, SyncResultDTO
+from suppliers.models import (
+    Supplier,
+    SupplierCatalogSync,
+    SupplierStockHistory,
+    SupplierStockRecord,
+)
+from suppliers.service.dto import SupplierProductDTO
 from suppliers.service.sync import (
-    BaseSupplierSyncService,
     APISupplierSyncService,
     ManualSupplierSyncService,
     get_sync_service,
     sync_supplier,
 )
-from suppliers.models import (
-    Supplier,
-    SupplierStockRecord,
-    SupplierStockHistory,
-    SupplierCatalogSync,
-)
-
 
 # ─── BaseSupplierSyncService Tests ────────────────────────────────────────────
 
@@ -258,11 +256,13 @@ class TestAPISupplierSyncService:
         mock_client = Mock()
         mock_client.__enter__ = Mock(return_value=mock_client)
         mock_client.__exit__ = Mock(return_value=None)
-        mock_client.get = Mock(side_effect=httpx.HTTPStatusError(
-            "Error",
-            request=Mock(),
-            response=Mock(status_code=500),
-        ))
+        mock_client.get = Mock(
+            side_effect=httpx.HTTPStatusError(
+                "Error",
+                request=Mock(),
+                response=Mock(status_code=500),
+            )
+        )
         mock_client_class.return_value = mock_client
 
         service = APISupplierSyncService(supplier_api)

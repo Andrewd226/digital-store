@@ -7,14 +7,13 @@ suppliers/service/base.py
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from django.db import transaction
-from django.utils import timezone
 
-from suppliers.service.dto import SyncStatsDTO
 from suppliers.models import Supplier, SupplierCatalogSync
 from suppliers.service.dao import SupplierCatalogSyncDAO
+from suppliers.service.dto import SyncStatsDTO
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ TResult = TypeVar("TResult")
 class BaseService(ABC, Generic[TDTO, TResult]):
     """
     Базовый класс для всех сервисов.
-    
+
     Предоставляет:
     - Транзакционность операций
     - Логирование
@@ -36,12 +35,12 @@ class BaseService(ABC, Generic[TDTO, TResult]):
 
     def __init__(self, supplier: Supplier):
         self.supplier = supplier
-        self.sync_record: Optional[SupplierCatalogSync] = None
+        self.sync_record: SupplierCatalogSync | None = None
         self.stats = SyncStatsDTO()
-        self.errors: List[str] = []
+        self.errors: list[str] = []
 
     @abstractmethod
-    def fetch_data(self) -> List[TDTO]:
+    def fetch_data(self) -> list[TDTO]:
         """
         Загружает данные от источника.
         Должен быть реализован в наследнике.
@@ -65,13 +64,15 @@ class BaseService(ABC, Generic[TDTO, TResult]):
             supplier=self.supplier,
             triggered_by=triggered_by,
         )
-        logger.info(f"Начало синхронизации для поставщика {self.supplier.name} (ID={self.supplier.id})")
+        logger.info(
+            f"Начало синхронизации для поставщика {self.supplier.name} (ID={self.supplier.id})"
+        )
         return self.sync_record
 
     @transaction.atomic
     def complete_sync(
         self,
-        status: Optional[str] = None,
+        status: str | None = None,
         error_log: str = "",
     ) -> SupplierCatalogSync:
         """

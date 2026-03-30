@@ -6,19 +6,15 @@ tests/suppliers/test_dao.py
 
 from decimal import Decimal
 
-import pytest
-from django.utils import timezone
-
-from suppliers.models import Supplier, SupplierStockRecord, SupplierStockHistory
+from suppliers.models import Supplier, SupplierStockRecord
 from suppliers.service.dao import (
-    SupplierDAO,
-    SupplierStockRecordDAO,
-    SupplierStockHistoryDAO,
-    SupplierCatalogSyncDAO,
-    ProductDAO,
     CurrencyDAO,
+    ProductDAO,
+    SupplierCatalogSyncDAO,
+    SupplierDAO,
+    SupplierStockHistoryDAO,
+    SupplierStockRecordDAO,
 )
-
 
 # ─── SupplierDAO Tests ────────────────────────────────────────────────────────
 
@@ -276,6 +272,7 @@ class TestSupplierCatalogSyncDAO:
         """Получение последней синхронизации."""
         sync1 = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
         import time
+
         time.sleep(0.01)
         sync2 = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
         last = SupplierCatalogSyncDAO.get_last_sync(supplier_api)

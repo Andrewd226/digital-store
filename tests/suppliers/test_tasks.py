@@ -8,8 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from suppliers.models import Supplier, SupplierCatalogSync
-
+from suppliers.models import SupplierCatalogSync
 
 # ─── Celery Task Tests ────────────────────────────────────────────────────────
 
@@ -64,8 +63,9 @@ class TestCeleryBeatSchedule:
     @pytest.mark.skip(reason="Celery задачи ещё не реализованы")
     def test_crontab_parsing(self):
         """Парсинг cron-расписания."""
-        from croniter import croniter
         from datetime import datetime
+
+        from croniter import croniter
 
         cron = croniter("0 6 * * *", datetime.now())
         next_run = cron.get_next(datetime)

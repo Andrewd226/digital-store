@@ -5,26 +5,24 @@ suppliers/service/sync.py
 """
 
 import logging
-from typing import Any, Dict, List, Optional
-
-from django.db import transaction
 from decimal import Decimal
+from typing import Any
 
 from helpers.arithmetic import round_decimal
-from suppliers.service.dto import SupplierProductDTO, SyncResultDTO
-from suppliers.service.base import BaseService
-from suppliers.service.dao import (
-    SupplierDAO,
-    SupplierStockRecordDAO,
-    SupplierStockHistoryDAO,
-    ProductDAO,
-    CurrencyDAO,
-)
 from suppliers.models import (
     Supplier,
-    SupplierStockHistory,
     SupplierCatalogSync,
+    SupplierStockHistory,
 )
+from suppliers.service.base import BaseService
+from suppliers.service.dao import (
+    CurrencyDAO,
+    ProductDAO,
+    SupplierDAO,
+    SupplierStockHistoryDAO,
+    SupplierStockRecordDAO,
+)
+from suppliers.service.dto import SupplierProductDTO, SyncResultDTO
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +153,7 @@ class APISupplierSyncService(BaseSupplierSyncService):
     Сервис синхронизации через REST API.
     """
 
-    def fetch_data(self) -> List[SupplierProductDTO]:
+    def fetch_data(self) -> list[SupplierProductDTO]:
         """Загружает данные через HTTP API."""
         import httpx
 
@@ -183,25 +181,27 @@ class APISupplierSyncService(BaseSupplierSyncService):
 
         return self._parse_api_response(data)
 
-    def _parse_api_response(self, data: Dict[str, Any]) -> List[SupplierProductDTO]:
+    def _parse_api_response(self, data: dict[str, Any]) -> list[SupplierProductDTO]:
         """Парсит ответ API в список DTO."""
         products = []
         items = data.get("items", data.get("products", []))
         field_mapping = self.supplier.api_extra_config.get("field_mapping", {})
 
         for item in items:
-            products.append(SupplierProductDTO(
-                supplier_sku=str(item.get(field_mapping.get("sku", "sku"), "")),
-                price=Decimal(str(item.get(field_mapping.get("price", "price"), "0"))),
-                currency_code=item.get(
-                    field_mapping.get("currency", "currency"),
-                    self.supplier.default_currency.currency_code
-                ),
-                num_in_stock=int(item.get(field_mapping.get("stock", "stock"), 0)),
-                product_upc=item.get(field_mapping.get("upc", "upc")),
-                product_title=item.get(field_mapping.get("title", "title")),
-                extra_data=item,
-            ))
+            products.append(
+                SupplierProductDTO(
+                    supplier_sku=str(item.get(field_mapping.get("sku", "sku"), "")),
+                    price=Decimal(str(item.get(field_mapping.get("price", "price"), "0"))),
+                    currency_code=item.get(
+                        field_mapping.get("currency", "currency"),
+                        self.supplier.default_currency.currency_code,
+                    ),
+                    num_in_stock=int(item.get(field_mapping.get("stock", "stock"), 0)),
+                    product_upc=item.get(field_mapping.get("upc", "upc")),
+                    product_title=item.get(field_mapping.get("title", "title")),
+                    extra_data=item,
+                )
+            )
 
         return products
 
@@ -215,11 +215,11 @@ class ManualSupplierSyncService(BaseSupplierSyncService):
     Данные передаются напрямую в конструктор.
     """
 
-    def __init__(self, supplier: Supplier, products_data: List[SupplierProductDTO]):
+    def __init__(self, supplier: Supplier, products_data: list[SupplierProductDTO]):
         super().__init__(supplier)
         self.products_data = products_data
 
-    def fetch_data(self) -> List[SupplierProductDTO]:
+    def fetch_data(self) -> list[SupplierProductDTO]:
         """Возвращает заранее подготовленные данные."""
         return self.products_data
 
@@ -228,8 +228,7 @@ class ManualSupplierSyncService(BaseSupplierSyncService):
 
 
 def get_sync_service(
-    supplier: Supplier,
-    products_data: Optional[List[SupplierProductDTO]] = None
+    supplier: Supplier, products_data: list[SupplierProductDTO] | None = None
 ) -> BaseSupplierSyncService:
     """
     Фабричный метод для создания сервиса синхронизации.
@@ -250,7 +249,7 @@ def get_sync_service(
 def sync_supplier(supplier_id: int, triggered_by: str = "celery") -> SupplierCatalogSync:
     """Утилита для запуска синхронизации поставщика по ID."""
     supplier = SupplierDAO.get_by_id(supplier_id)
-    
+
     if supplier is None:
         raise ValueError(f"Поставщик с ID {supplier_id} не найден")
 
@@ -261,7 +260,7 @@ def sync_supplier(supplier_id: int, triggered_by: str = "celery") -> SupplierCat
     return service.sync(triggered_by=triggered_by)
 
 
-def sync_all_active_suppliers(triggered_by: str = "celery") -> List[SupplierCatalogSync]:
+def sync_all_active_suppliers(triggered_by: str = "celery") -> list[SupplierCatalogSync]:
     """Запускает синхронизацию всех активных поставщиков."""
     suppliers = SupplierDAO.get_active_suppliers()
     results = []

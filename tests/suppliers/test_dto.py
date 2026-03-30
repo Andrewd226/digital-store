@@ -11,11 +11,10 @@ from pydantic import ValidationError
 
 from suppliers.service.dto import (
     SupplierProductDTO,
+    SyncConfigDTO,
     SyncResultDTO,
     SyncStatsDTO,
-    SyncConfigDTO,
 )
-
 
 # ─── SupplierProductDTO Tests ─────────────────────────────────────────────────
 
