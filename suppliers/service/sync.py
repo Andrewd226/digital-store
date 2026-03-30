@@ -234,9 +234,7 @@ def get_sync_service(
             raise ValueError("Для ручной синхронизации необходимо передать products_data")
         return ManualSupplierSyncService(supplier, products_data)
     else:
-        raise NotImplementedError(
-            f"Метод синхронизации {supplier.sync_method} ещё не реализован"
-        )
+        raise NotImplementedError(f"Метод синхронизации {supplier.sync_method} ещё не реализован")
 
 
 # ─── Helper Functions ─────────────────────────────────────────────────────────

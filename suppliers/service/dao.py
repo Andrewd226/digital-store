@@ -76,9 +76,7 @@ class SupplierStockRecordDAO:
     """
 
     @staticmethod
-    def get_by_supplier_product(
-        supplier: Supplier, product: "Product"
-    ) -> SupplierStockRecord | None:
+    def get_by_supplier_product(supplier: Supplier, product: Product) -> SupplierStockRecord | None:
         """Получает запись остатка по поставщику и товару."""
         try:
             return SupplierStockRecord.objects.get(
@@ -90,7 +88,7 @@ class SupplierStockRecordDAO:
 
     @staticmethod
     def get_or_create(
-        supplier: Supplier, product: "Product", defaults: dict
+        supplier: Supplier, product: Product, defaults: dict
     ) -> tuple[SupplierStockRecord, bool]:
         """
         Находит или создаёт запись остатка.
@@ -110,7 +108,7 @@ class SupplierStockRecordDAO:
         price: Decimal,
         supplier_sku: str,
         num_in_stock: int,
-        currency: "Currency",
+        currency: Currency,
     ) -> SupplierStockRecord:
         """
         Обновляет запись остатка.
@@ -329,7 +327,7 @@ class ProductDAO:
     """
 
     @staticmethod
-    def get_by_upc(upc: str) -> "Product | None":
+    def get_by_upc(upc: str) -> Product | None:
         """Получает товар по UPC."""
         from catalogue.models import Product
 
@@ -339,7 +337,7 @@ class ProductDAO:
             return None
 
     @staticmethod
-    def get_by_upc_list(upc_list: list[str]) -> "QuerySet[Product]":
+    def get_by_upc_list(upc_list: list[str]) -> QuerySet[Product]:
         """Возвращает товары по списку UPC."""
         from catalogue.models import Product
 
@@ -355,7 +353,7 @@ class CurrencyDAO:
     """
 
     @staticmethod
-    def get_by_code(currency_code: str) -> "Currency | None":
+    def get_by_code(currency_code: str) -> Currency | None:
         """Получает валюту по коду."""
         from core.models import Currency
 
@@ -365,7 +363,7 @@ class CurrencyDAO:
             return None
 
     @staticmethod
-    def get_active() -> "QuerySet[Currency]":
+    def get_active() -> QuerySet[Currency]:
         """Возвращает все валюты."""
         from core.models import Currency
 

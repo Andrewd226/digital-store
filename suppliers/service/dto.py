@@ -7,10 +7,9 @@ Data Transfer Objects для передачи данных между слоям
 from decimal import Decimal
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from helpers.arithmetic import round_decimal
-
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 

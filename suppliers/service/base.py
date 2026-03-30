@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
 from django.db import transaction
-from django.utils import timezone
 
 from suppliers.models import Supplier, SupplierCatalogSync
 from suppliers.service.dao import SupplierCatalogSyncDAO
