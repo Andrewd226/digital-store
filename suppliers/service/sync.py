@@ -12,7 +12,7 @@ from decimal import Decimal
 
 from helpers.arithmetic import round_decimal
 from suppliers.service.dto import SupplierProductDTO, SyncResultDTO
-from suppliers.services.base import BaseService
+from suppliers.service.base import BaseService
 from suppliers.models import (
     Supplier,
     SupplierStockRecord,
@@ -32,7 +32,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
     Реализует общую логику обработки товаров.
     """
 
-    def process_item(self,  SupplierProductDTO) -> SyncResultDTO:
+    def process_item(self, product_data: SupplierProductDTO) -> SyncResultDTO: 
         """
         Обрабатывает один товар: создаёт или обновляет запись, ведёт историю.
         """
@@ -247,7 +247,7 @@ class APISupplierSyncService(BaseSupplierSyncService):
 
         return self._parse_api_response(data)
 
-    def _parse_api_response(self,  Dict[str, Any]) -> List[SupplierProductDTO]:
+    def _parse_api_response(self, data: Dict[str, Any]) -> List[SupplierProductDTO]:
         """Парсит ответ API в список DTO."""
         products = []
         items = data.get("items", data.get("products", []))
@@ -279,7 +279,7 @@ class ManualSupplierSyncService(BaseSupplierSyncService):
     Данные передаются напрямую в конструктор.
     """
 
-    def __init__(self, supplier: Supplier, products_ List[SupplierProductDTO]):
+    def __init__(self, supplier: Supplier, products_data: List[SupplierProductDTO]):
         super().__init__(supplier)
         self.products_data = products_data
 
@@ -293,7 +293,7 @@ class ManualSupplierSyncService(BaseSupplierSyncService):
 
 def get_sync_service(
     supplier: Supplier,
-    products_ Optional[List[SupplierProductDTO]] = None
+    products_data: Optional[List[SupplierProductDTO]] = None
 ) -> BaseSupplierSyncService:
     """
     Фабричный метод для создания сервиса синхронизации.

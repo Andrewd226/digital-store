@@ -47,7 +47,7 @@ class SupplierProductDTO(BaseModel):
     num_in_stock: NumInStock
     product_upc: Annotated[str | None, Field(description="UPC товара")] = None
     product_title: Annotated[str | None, Field(description="Название товара")] = None
-    extra_: Annotated[dict[str, Any] | None, Field(description="Дополнительные данные")] = None
+    extra_data: Annotated[dict[str, Any] | None, Field(description="Дополнительные данные")] = None
 
     def __hash__(self):
         return hash((self.supplier_sku, self.price, self.num_in_stock))
