@@ -5,17 +5,26 @@ suppliers/service/sync.py
 """
 
 import logging
+from typing import Any, Dict, List, Optional
+
+from django.db import transaction
 from decimal import Decimal
 
 from helpers.arithmetic import round_decimal
+from suppliers.service.dto import SupplierProductDTO, SyncResultDTO
+from suppliers.service.base import BaseService
+from suppliers.service.dao import (
+    SupplierDAO,
+    SupplierStockRecordDAO,
+    SupplierStockHistoryDAO,
+    ProductDAO,
+    CurrencyDAO,
+)
 from suppliers.models import (
     Supplier,
-    SupplierCatalogSync,
     SupplierStockHistory,
-    SupplierStockRecord,
+    SupplierCatalogSync,
 )
-from suppliers.service.base import BaseService
-from suppliers.service.dto import SupplierProductDTO, SyncResultDTO
 
 logger = logging.getLogger(__name__)
 
@@ -29,59 +38,73 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
     Реализует общую логику обработки товаров.
     """
 
-    def process_item(self, item: SupplierProductDTO) -> SyncResultDTO:
+    def process_item(self, product_data: SupplierProductDTO) -> SyncResultDTO:
         """
         Обрабатывает один товар: создаёт или обновляет запись, ведёт историю.
         """
+        result = SyncResultDTO(supplier_sku=product_data.supplier_sku)
 
-        result = SyncResultDTO(supplier_sku=item.supplier_sku)
-
-        currency = self._get_currency(item.currency_code)
+        # Получаем валюту через DAO
+        currency = CurrencyDAO.get_by_code(product_data.currency_code)
         if currency is None:
             result.failed = True
-            result.error_message = f"Валюта не найдена: {item.currency_code}"
+            result.error_message = f"Валюта не найдена: {product_data.currency_code}"
             return result
 
-        product = self._get_product(item.product_upc)
+        # Находим товар по UPC через DAO
+        product = ProductDAO.get_by_upc(product_data.product_upc)
         if product is None:
             result.skipped = True
             return result
 
-        price = round_decimal(item.price, 25)
+        # Округляем цену
+        price = round_decimal(product_data.price, 25)
 
-        stock_record, created = self._get_or_create_stock_record(
+        # Находим или создаём запись остатка через DAO
+        stock_record, created = SupplierStockRecordDAO.get_or_create(
+            supplier=self.supplier,
             product=product,
-            supplier_sku=item.supplier_sku,
-            price=price,
-            currency=currency,
-            num_in_stock=item.num_in_stock,
+            defaults={
+                "supplier_sku": product_data.supplier_sku,
+                "price": price,
+                "currency": currency,
+                "num_in_stock": product_data.num_in_stock,
+                "is_active": True,
+            },
         )
 
         if created:
             result.created = True
             result.price_after = price
-            result.stock_after = item.num_in_stock
-            self._create_history_record(
+            result.stock_after = product_data.num_in_stock
+            SupplierStockHistoryDAO.create(
                 stock_record=stock_record,
-                change_type=SupplierStockHistory.ChangeType.CREATED,
+                sync=self.sync_record,
+                snapshot_supplier_name=self.supplier.name,
+                snapshot_product_title=product.title,
+                snapshot_product_upc=product.upc or "",
+                snapshot_supplier_sku=product_data.supplier_sku,
+                snapshot_currency_code=currency.currency_code,
                 price_before=None,
                 price_after=price,
-                stock_before=None,
-                stock_after=item.num_in_stock,
+                num_in_stock_before=None,
+                num_in_stock_after=product_data.num_in_stock,
+                change_type=SupplierStockHistory.ChangeType.CREATED,
             )
         else:
+            # Проверяем изменения
             price_changed = stock_record.price != price
-            stock_changed = stock_record.num_in_stock != item.num_in_stock
+            stock_changed = stock_record.num_in_stock != product_data.num_in_stock
 
             if price_changed or stock_changed:
                 price_before = stock_record.price
                 stock_before = stock_record.num_in_stock
 
-                self._update_stock_record(
+                SupplierStockRecordDAO.update(
                     stock_record=stock_record,
                     price=price,
-                    supplier_sku=item.supplier_sku,
-                    num_in_stock=item.num_in_stock,
+                    supplier_sku=product_data.supplier_sku,
+                    num_in_stock=product_data.num_in_stock,
                     currency=currency,
                 )
 
@@ -91,86 +114,28 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 result.price_before = price_before
                 result.price_after = price
                 result.stock_before = stock_before
-                result.stock_after = item.num_in_stock
+                result.stock_after = product_data.num_in_stock
 
                 change_type = self._determine_change_type(price_changed, stock_changed)
 
-                self._create_history_record(
+                SupplierStockHistoryDAO.create(
                     stock_record=stock_record,
-                    change_type=change_type,
+                    sync=self.sync_record,
+                    snapshot_supplier_name=self.supplier.name,
+                    snapshot_product_title=product.title,
+                    snapshot_product_upc=product.upc or "",
+                    snapshot_supplier_sku=product_data.supplier_sku,
+                    snapshot_currency_code=currency.currency_code,
                     price_before=price_before,
                     price_after=price,
-                    stock_before=stock_before,
-                    stock_after=item.num_in_stock,
+                    num_in_stock_before=stock_before,
+                    num_in_stock_after=product_data.num_in_stock,
+                    change_type=change_type,
                 )
             else:
                 result.skipped = True
 
         return result
-
-    def _get_currency(self, currency_code: str) -> Currency | None:
-        """Получает валюту по коду."""
-        from core.models import Currency
-
-        try:
-            return Currency.objects.get(currency_code=currency_code)
-        except Currency.DoesNotExist:
-            logger.warning("Валюта не найдена: %s", currency_code)
-            return None
-
-    def _get_product(self, upc: str | None) -> Product | None:
-        """Получает товар по UPC."""
-        from catalogue.models import Product
-
-        if not upc:
-            return None
-        return Product.objects.filter(upc=upc).first()
-
-    def _get_or_create_stock_record(
-        self,
-        product: Product,
-        supplier_sku: str,
-        price: Decimal,
-        currency: Currency,
-        num_in_stock: int,
-    ) -> tuple[SupplierStockRecord, bool]:
-        """Находит или создаёт запись остатка."""
-        return SupplierStockRecord.objects.get_or_create(
-            supplier=self.supplier,
-            product=product,
-            defaults={
-                "supplier_sku": supplier_sku,
-                "price": price,
-                "currency": currency,
-                "num_in_stock": num_in_stock,
-                "is_active": True,
-            },
-        )
-
-    def _update_stock_record(
-        self,
-        stock_record: SupplierStockRecord,
-        price: Decimal,
-        supplier_sku: str,
-        num_in_stock: int,
-        currency: Currency,
-    ) -> None:
-        """Обновляет запись остатка."""
-        stock_record.price = price
-        stock_record.supplier_sku = supplier_sku
-        stock_record.num_in_stock = num_in_stock
-        stock_record.currency = currency
-        stock_record.is_active = True
-        stock_record.save(
-            update_fields=[
-                "price",
-                "supplier_sku",
-                "num_in_stock",
-                "currency",
-                "is_active",
-                "updated_at",
-            ]
-        )
 
     def _determine_change_type(self, price_changed: bool, stock_changed: bool) -> str:
         """Определяет тип изменения для истории."""
@@ -181,31 +146,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         else:
             return SupplierStockHistory.ChangeType.STOCK_CHANGED
 
-    def _create_history_record(
-        self,
-        stock_record: SupplierStockRecord,
-        change_type: str,
-        price_before: Decimal | None,
-        price_after: Decimal,
-        stock_before: int | None,
-        stock_after: int,
-    ) -> SupplierStockHistory:
-        """Создаёт запись в истории изменений."""
-        return SupplierStockHistory.objects.create(
-            stock_record=stock_record,
-            sync=self.sync_record,
-            snapshot_supplier_name=self.supplier.name,
-            snapshot_product_title=stock_record.product.title,
-            snapshot_product_upc=stock_record.product.upc or "",
-            snapshot_supplier_sku=stock_record.supplier_sku,
-            snapshot_currency_code=stock_record.currency.currency_code,
-            price_before=price_before,
-            price_after=price_after,
-            num_in_stock_before=stock_before,
-            num_in_stock_after=stock_after,
-            change_type=change_type,
-        )
-
 
 # ─── API Sync Service ─────────────────────────────────────────────────────────
 
@@ -215,14 +155,14 @@ class APISupplierSyncService(BaseSupplierSyncService):
     Сервис синхронизации через REST API.
     """
 
-    def fetch_data(self) -> list[SupplierProductDTO]:
+    def fetch_data(self) -> List[SupplierProductDTO]:
         """Загружает данные через HTTP API."""
         import httpx
 
         if not self.supplier.api_url:
             raise ValueError(f"API URL не настроен для поставщика {self.supplier.name}")
 
-        credential = getattr(self.supplier, "credential", None)
+        credential = SupplierDAO.get_credential(self.supplier)
         headers = {}
 
         if credential:
@@ -243,27 +183,25 @@ class APISupplierSyncService(BaseSupplierSyncService):
 
         return self._parse_api_response(data)
 
-    def _parse_api_response(self, data: dict) -> list[SupplierProductDTO]:
+    def _parse_api_response(self, data: Dict[str, Any]) -> List[SupplierProductDTO]:
         """Парсит ответ API в список DTO."""
         products = []
         items = data.get("items", data.get("products", []))
         field_mapping = self.supplier.api_extra_config.get("field_mapping", {})
 
         for item in items:
-            products.append(
-                SupplierProductDTO(
-                    supplier_sku=str(item.get(field_mapping.get("sku", "sku"), "")),
-                    price=Decimal(str(item.get(field_mapping.get("price", "price"), "0"))),
-                    currency_code=item.get(
-                        field_mapping.get("currency", "currency"),
-                        self.supplier.default_currency.currency_code,
-                    ),
-                    num_in_stock=int(item.get(field_mapping.get("stock", "stock"), 0)),
-                    product_upc=item.get(field_mapping.get("upc", "upc")),
-                    product_title=item.get(field_mapping.get("title", "title")),
-                    extra_data=item,
-                )
-            )
+            products.append(SupplierProductDTO(
+                supplier_sku=str(item.get(field_mapping.get("sku", "sku"), "")),
+                price=Decimal(str(item.get(field_mapping.get("price", "price"), "0"))),
+                currency_code=item.get(
+                    field_mapping.get("currency", "currency"),
+                    self.supplier.default_currency.currency_code
+                ),
+                num_in_stock=int(item.get(field_mapping.get("stock", "stock"), 0)),
+                product_upc=item.get(field_mapping.get("upc", "upc")),
+                product_title=item.get(field_mapping.get("title", "title")),
+                extra_data=item,
+            ))
 
         return products
 
@@ -277,11 +215,11 @@ class ManualSupplierSyncService(BaseSupplierSyncService):
     Данные передаются напрямую в конструктор.
     """
 
-    def __init__(self, supplier: Supplier, products_data: list[SupplierProductDTO]):
+    def __init__(self, supplier: Supplier, products_data: List[SupplierProductDTO]):
         super().__init__(supplier)
         self.products_data = products_data
 
-    def fetch_data(self) -> list[SupplierProductDTO]:
+    def fetch_data(self) -> List[SupplierProductDTO]:
         """Возвращает заранее подготовленные данные."""
         return self.products_data
 
@@ -291,7 +229,7 @@ class ManualSupplierSyncService(BaseSupplierSyncService):
 
 def get_sync_service(
     supplier: Supplier,
-    products_data: list[SupplierProductDTO] | None = None,
+    products_data: Optional[List[SupplierProductDTO]] = None
 ) -> BaseSupplierSyncService:
     """
     Фабричный метод для создания сервиса синхронизации.
@@ -311,7 +249,10 @@ def get_sync_service(
 
 def sync_supplier(supplier_id: int, triggered_by: str = "celery") -> SupplierCatalogSync:
     """Утилита для запуска синхронизации поставщика по ID."""
-    supplier = Supplier.objects.get(id=supplier_id)
+    supplier = SupplierDAO.get_by_id(supplier_id)
+    
+    if supplier is None:
+        raise ValueError(f"Поставщик с ID {supplier_id} не найден")
 
     if not supplier.supplier_is_active:
         raise ValueError(f"Поставщик {supplier.name} отключён")
@@ -320,9 +261,9 @@ def sync_supplier(supplier_id: int, triggered_by: str = "celery") -> SupplierCat
     return service.sync(triggered_by=triggered_by)
 
 
-def sync_all_active_suppliers(triggered_by: str = "celery") -> list[SupplierCatalogSync]:
+def sync_all_active_suppliers(triggered_by: str = "celery") -> List[SupplierCatalogSync]:
     """Запускает синхронизацию всех активных поставщиков."""
-    suppliers = Supplier.objects.filter(supplier_is_active=True)
+    suppliers = SupplierDAO.get_active_suppliers()
     results = []
 
     for supplier in suppliers:
@@ -330,6 +271,6 @@ def sync_all_active_suppliers(triggered_by: str = "celery") -> list[SupplierCata
             sync_record = sync_supplier(supplier.id, triggered_by=triggered_by)
             results.append(sync_record)
         except Exception as e:
-            logger.error("Ошибка синхронизации %s: %s", supplier.name, e)
+            logger.error(f"Ошибка синхронизации {supplier.name}: {e}")
 
     return results
