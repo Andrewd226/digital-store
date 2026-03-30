@@ -1,5 +1,5 @@
 """
-suppliers/services/sync.py
+suppliers/service/sync.py
 
 Сервисы синхронизации каталогов поставщиков.
 """
@@ -11,7 +11,7 @@ from django.db import transaction
 from decimal import Decimal
 
 from helpers.arithmetic import round_decimal
-from suppliers.dto import SupplierProductDTO, SyncResultDTO
+from suppliers.service.dto import SupplierProductDTO, SyncResultDTO
 from suppliers.services.base import BaseService
 from suppliers.models import (
     Supplier,

@@ -1,5 +1,5 @@
 """
-suppliers/services/base.py
+suppliers/service/base.py
 
 Базовый класс для всех сервисов приложения.
 Содержит общую логику: логирование, транзакции, обработку ошибок.
@@ -12,7 +12,7 @@ from typing import Any, Dict, Generic, List, Optional, TypeVar
 from django.db import transaction
 from django.utils import timezone
 
-from suppliers.dto import SyncStatsDTO
+from suppliers.service.dto import SyncStatsDTO
 from suppliers.models import Supplier, SupplierCatalogSync
 
 logger = logging.getLogger(__name__)

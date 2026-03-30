@@ -1,5 +1,5 @@
 """
-suppliers/dto.py
+suppliers/service/dto.py
 
 Data Transfer Objects для передачи данных между слоями приложения.
 """

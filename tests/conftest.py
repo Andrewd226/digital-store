@@ -1,7 +1,7 @@
 """
 tests/conftest.py
 
-Общие фикстуры для тестов currencies.
+Общие фикстуры для всех тестов проекта.
 """
 
 from decimal import Decimal
@@ -15,6 +15,15 @@ from currencies.models import (
     CurrencyRateSourceCredential,
     ExchangeRate,
 )
+from catalogue.models import Product
+from suppliers.models import (
+    Supplier,
+    SupplierCredential,
+    SupplierStockRecord,
+)
+
+
+# ─── Currency Fixtures ────────────────────────────────────────────────────────
 
 
 @pytest.fixture
@@ -55,6 +64,9 @@ def btc(db):
         defaults={"name": "Bitcoin", "currency_type": Currency.CurrencyType.CRYPTO, "symbol": "₿"},
     )
     return currency
+
+
+# ─── CurrencyRateSource Fixtures ──────────────────────────────────────────────
 
 
 @pytest.fixture
@@ -112,3 +124,132 @@ def existing_rate(db, coincap_source, usd, rub):
 @pytest.fixture
 def rate_datetime():
     return timezone.now()
+
+
+# ─── Supplier Fixtures ────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def supplier_api(db, rub):
+    """Поставщик с методом синхронизации API."""
+    return Supplier.objects.create(
+        name="Test API Supplier",
+        code="test-api-supplier",
+        sync_method=Supplier.SyncMethod.API,
+        api_url="https://api.example.com/products",
+        default_currency=rub,
+        sync_schedule="0 6 * * *",
+        supplier_is_active=True,
+        priority=100,
+    )
+
+
+@pytest.fixture
+def supplier_manual(db, rub):
+    """Поставщик с ручной синхронизацией."""
+    return Supplier.objects.create(
+        name="Test Manual Supplier",
+        code="test-manual-supplier",
+        sync_method=Supplier.SyncMethod.MANUAL,
+        default_currency=rub,
+        sync_schedule="0 6 * * *",
+        supplier_is_active=True,
+        priority=100,
+    )
+
+
+@pytest.fixture
+def supplier_ftp(db, rub):
+    """Поставщик с методом синхронизации FTP."""
+    return Supplier.objects.create(
+        name="Test FTP Supplier",
+        code="test-ftp-supplier",
+        sync_method=Supplier.SyncMethod.FTP,
+        default_currency=rub,
+        sync_schedule="0 3 * * *",
+        supplier_is_active=True,
+        priority=50,
+    )
+
+
+@pytest.fixture
+def supplier_inactive(db, rub):
+    """Неактивный поставщик."""
+    return Supplier.objects.create(
+        name="Test Inactive Supplier",
+        code="test-inactive-supplier",
+        sync_method=Supplier.SyncMethod.MANUAL,
+        default_currency=rub,
+        supplier_is_active=False,
+        priority=100,
+    )
+
+
+@pytest.fixture
+def supplier_credential(supplier_api):
+    """Учётные данные поставщика."""
+    return SupplierCredential.objects.create(
+        supplier=supplier_api,
+        api_key="test-api-key-12345",
+        api_secret="test-api-secret-67890",
+    )
+
+
+@pytest.fixture
+def product_test(db):
+    """Тестовый товар."""
+    return Product.objects.create(
+        title="Test Product",
+        upc="123456789012",
+        is_available=True,
+    )
+
+
+@pytest.fixture
+def product_test_2(db):
+    """Второй тестовый товар."""
+    return Product.objects.create(
+        title="Test Product 2",
+        upc="123456789013",
+        is_available=True,
+    )
+
+
+@pytest.fixture
+def stock_record(supplier_api, product_test, rub):
+    """Запись остатка у поставщика."""
+    return SupplierStockRecord.objects.create(
+        supplier=supplier_api,
+        product=product_test,
+        supplier_sku="ART-001",
+        price=Decimal("999.99"),
+        currency=rub,
+        num_in_stock=100,
+        num_allocated=0,
+        is_active=True,
+    )
+
+
+@pytest.fixture
+def stock_record_list(supplier_api, product_test, product_test_2, rub):
+    """Список записей остатков."""
+    return [
+        SupplierStockRecord.objects.create(
+            supplier=supplier_api,
+            product=product_test,
+            supplier_sku="ART-001",
+            price=Decimal("999.99"),
+            currency=rub,
+            num_in_stock=100,
+            is_active=True,
+        ),
+        SupplierStockRecord.objects.create(
+            supplier=supplier_api,
+            product=product_test_2,
+            supplier_sku="ART-002",
+            price=Decimal("1499.50"),
+            currency=rub,
+            num_in_stock=50,
+            is_active=True,
+        ),
+    ]
