@@ -216,7 +216,7 @@ LANGUAGES = _settings.django.languages
 TIME_ZONE = _settings.django.time_zone
 USE_TZ = _settings.django.use_tz
 USE_I18N = _settings.django.use_i18n
-USE_I10N = _settings.django.use_l10n
+USE_L10N = _settings.django.use_l10n
 DATETIME_FORMAT = _settings.django.datetime_format
 
 MODELTRANSLATION_DEFAULT_LANGUAGE = _settings.django.default_language

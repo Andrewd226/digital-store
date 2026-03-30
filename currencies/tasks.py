@@ -127,7 +127,7 @@ class CoinCapFetcher(BaseFetcher):
                 continue
             try:
                 rates_usd[code] = Decimal(str(item["rateUsd"]))
-            except InvalidOperation, KeyError:
+            except (InvalidOperation, KeyError):
                 logger.warning("CoinCap: не удалось распарсить rateUsd для %s", item.get("id"))
 
         rate_datetime = timezone.now()
