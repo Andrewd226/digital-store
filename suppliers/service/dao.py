@@ -76,7 +76,9 @@ class SupplierStockRecordDAO:
     """
 
     @staticmethod
-    def get_by_supplier_product(supplier: Supplier, product: Product) -> SupplierStockRecord | None:
+    def get_by_supplier_product(
+        supplier: Supplier, product: "Product"
+    ) -> SupplierStockRecord | None:
         """Получает запись остатка по поставщику и товару."""
         try:
             return SupplierStockRecord.objects.get(
@@ -88,7 +90,7 @@ class SupplierStockRecordDAO:
 
     @staticmethod
     def get_or_create(
-        supplier: Supplier, product: Product, defaults: dict
+        supplier: Supplier, product: "Product", defaults: dict
     ) -> tuple[SupplierStockRecord, bool]:
         """
         Находит или создаёт запись остатка.
@@ -108,7 +110,7 @@ class SupplierStockRecordDAO:
         price: Decimal,
         supplier_sku: str,
         num_in_stock: int,
-        currency: Currency,
+        currency: "Currency",
     ) -> SupplierStockRecord:
         """
         Обновляет запись остатка.
@@ -168,8 +170,7 @@ class SupplierStockRecordDAO:
             .exclude(supplier_sku__in=active_skus)
             .update(is_active=False)
         )
-
-        logger.info(f"Деактивировано {deactivated} записей остатков для {supplier.name}")
+        logger.info("Деактивировано %d записей остатков для %s", deactivated, supplier.name)
         return deactivated
 
 
@@ -223,10 +224,8 @@ class SupplierStockHistoryDAO:
     ) -> QuerySet[SupplierStockHistory]:
         """Возвращает историю по записи остатка."""
         qs = SupplierStockHistory.objects.filter(stock_record=stock_record).order_by("-recorded_at")
-
         if limit:
             qs = qs[:limit]
-
         return qs
 
     @staticmethod
@@ -237,10 +236,8 @@ class SupplierStockHistoryDAO:
         qs = SupplierStockHistory.objects.filter(stock_record__supplier=supplier).order_by(
             "-recorded_at"
         )
-
         if limit:
             qs = qs[:limit]
-
         return qs
 
 
@@ -260,13 +257,10 @@ class SupplierCatalogSyncDAO:
         Returns:
             Созданная запись синхронизации
         """
-        from django.utils import timezone
-
         return SupplierCatalogSync.objects.create(
             supplier=supplier,
             status=SupplierCatalogSync.Status.RUNNING,
             triggered_by=triggered_by,
-            started_at=timezone.now(),
         )
 
     @staticmethod
@@ -316,10 +310,8 @@ class SupplierCatalogSyncDAO:
     ) -> QuerySet[SupplierCatalogSync]:
         """Возвращает записи синхронизации по поставщику."""
         qs = SupplierCatalogSync.objects.filter(supplier=supplier).order_by("-started_at")
-
         if limit:
             qs = qs[:limit]
-
         return qs
 
     @staticmethod
@@ -328,7 +320,7 @@ class SupplierCatalogSyncDAO:
         return SupplierCatalogSyncDAO.get_by_supplier(supplier, limit=1).first()
 
 
-# ─── Product DAO (для внешних зависимостей) ───────────────────────────────────
+# ─── Product DAO ──────────────────────────────────────────────────────────────
 
 
 class ProductDAO:
@@ -337,7 +329,7 @@ class ProductDAO:
     """
 
     @staticmethod
-    def get_by_upc(upc: str) -> Product | None:
+    def get_by_upc(upc: str) -> "Product | None":
         """Получает товар по UPC."""
         from catalogue.models import Product
 
@@ -347,14 +339,14 @@ class ProductDAO:
             return None
 
     @staticmethod
-    def get_by_upc_list(upc_list: list[str]) -> QuerySet[Product]:
+    def get_by_upc_list(upc_list: list[str]) -> "QuerySet[Product]":
         """Возвращает товары по списку UPC."""
         from catalogue.models import Product
 
         return Product.objects.filter(upc__in=upc_list)
 
 
-# ─── Currency DAO (для внешних зависимостей) ──────────────────────────────────
+# ─── Currency DAO ─────────────────────────────────────────────────────────────
 
 
 class CurrencyDAO:
@@ -363,7 +355,7 @@ class CurrencyDAO:
     """
 
     @staticmethod
-    def get_by_code(currency_code: str) -> Currency | None:
+    def get_by_code(currency_code: str) -> "Currency | None":
         """Получает валюту по коду."""
         from core.models import Currency
 
@@ -373,8 +365,8 @@ class CurrencyDAO:
             return None
 
     @staticmethod
-    def get_active() -> QuerySet[Currency]:
-        """Возвращает все активные валюты."""
+    def get_active() -> "QuerySet[Currency]":
+        """Возвращает все валюты."""
         from core.models import Currency
 
         return Currency.objects.all()

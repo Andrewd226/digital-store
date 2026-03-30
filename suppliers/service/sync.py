@@ -8,6 +8,8 @@ import logging
 from decimal import Decimal
 from typing import Any
 
+import httpx
+
 from helpers.arithmetic import round_decimal
 from suppliers.models import (
     Supplier,
@@ -36,37 +38,33 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
     Реализует общую логику обработки товаров.
     """
 
-    def process_item(self, product_data: SupplierProductDTO) -> SyncResultDTO:
+    def process_item(self, item: SupplierProductDTO) -> SyncResultDTO:
         """
         Обрабатывает один товар: создаёт или обновляет запись, ведёт историю.
         """
-        result = SyncResultDTO(supplier_sku=product_data.supplier_sku)
+        result = SyncResultDTO(supplier_sku=item.supplier_sku)
 
-        # Получаем валюту через DAO
-        currency = CurrencyDAO.get_by_code(product_data.currency_code)
+        currency = CurrencyDAO.get_by_code(item.currency_code)
         if currency is None:
             result.failed = True
-            result.error_message = f"Валюта не найдена: {product_data.currency_code}"
+            result.error_message = f"Валюта не найдена: {item.currency_code}"
             return result
 
-        # Находим товар по UPC через DAO
-        product = ProductDAO.get_by_upc(product_data.product_upc)
+        product = ProductDAO.get_by_upc(item.product_upc)
         if product is None:
             result.skipped = True
             return result
 
-        # Округляем цену
-        price = round_decimal(product_data.price, 25)
+        price = round_decimal(item.price, 25)
 
-        # Находим или создаём запись остатка через DAO
         stock_record, created = SupplierStockRecordDAO.get_or_create(
             supplier=self.supplier,
             product=product,
             defaults={
-                "supplier_sku": product_data.supplier_sku,
+                "supplier_sku": item.supplier_sku,
                 "price": price,
                 "currency": currency,
-                "num_in_stock": product_data.num_in_stock,
+                "num_in_stock": item.num_in_stock,
                 "is_active": True,
             },
         )
@@ -74,25 +72,24 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         if created:
             result.created = True
             result.price_after = price
-            result.stock_after = product_data.num_in_stock
+            result.stock_after = item.num_in_stock
             SupplierStockHistoryDAO.create(
                 stock_record=stock_record,
                 sync=self.sync_record,
                 snapshot_supplier_name=self.supplier.name,
                 snapshot_product_title=product.title,
                 snapshot_product_upc=product.upc or "",
-                snapshot_supplier_sku=product_data.supplier_sku,
+                snapshot_supplier_sku=item.supplier_sku,
                 snapshot_currency_code=currency.currency_code,
                 price_before=None,
                 price_after=price,
                 num_in_stock_before=None,
-                num_in_stock_after=product_data.num_in_stock,
+                num_in_stock_after=item.num_in_stock,
                 change_type=SupplierStockHistory.ChangeType.CREATED,
             )
         else:
-            # Проверяем изменения
             price_changed = stock_record.price != price
-            stock_changed = stock_record.num_in_stock != product_data.num_in_stock
+            stock_changed = stock_record.num_in_stock != item.num_in_stock
 
             if price_changed or stock_changed:
                 price_before = stock_record.price
@@ -101,8 +98,8 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 SupplierStockRecordDAO.update(
                     stock_record=stock_record,
                     price=price,
-                    supplier_sku=product_data.supplier_sku,
-                    num_in_stock=product_data.num_in_stock,
+                    supplier_sku=item.supplier_sku,
+                    num_in_stock=item.num_in_stock,
                     currency=currency,
                 )
 
@@ -112,9 +109,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 result.price_before = price_before
                 result.price_after = price
                 result.stock_before = stock_before
-                result.stock_after = product_data.num_in_stock
-
-                change_type = self._determine_change_type(price_changed, stock_changed)
+                result.stock_after = item.num_in_stock
 
                 SupplierStockHistoryDAO.create(
                     stock_record=stock_record,
@@ -122,13 +117,13 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                     snapshot_supplier_name=self.supplier.name,
                     snapshot_product_title=product.title,
                     snapshot_product_upc=product.upc or "",
-                    snapshot_supplier_sku=product_data.supplier_sku,
+                    snapshot_supplier_sku=item.supplier_sku,
                     snapshot_currency_code=currency.currency_code,
                     price_before=price_before,
                     price_after=price,
                     num_in_stock_before=stock_before,
-                    num_in_stock_after=product_data.num_in_stock,
-                    change_type=change_type,
+                    num_in_stock_after=item.num_in_stock,
+                    change_type=self._determine_change_type(price_changed, stock_changed),
                 )
             else:
                 result.skipped = True
@@ -155,13 +150,11 @@ class APISupplierSyncService(BaseSupplierSyncService):
 
     def fetch_data(self) -> list[SupplierProductDTO]:
         """Загружает данные через HTTP API."""
-        import httpx
-
         if not self.supplier.api_url:
             raise ValueError(f"API URL не настроен для поставщика {self.supplier.name}")
 
         credential = SupplierDAO.get_credential(self.supplier)
-        headers = {}
+        headers: dict[str, str] = {}
 
         if credential:
             if credential.api_key:
@@ -228,7 +221,8 @@ class ManualSupplierSyncService(BaseSupplierSyncService):
 
 
 def get_sync_service(
-    supplier: Supplier, products_data: list[SupplierProductDTO] | None = None
+    supplier: Supplier,
+    products_data: list[SupplierProductDTO] | None = None,
 ) -> BaseSupplierSyncService:
     """
     Фабричный метод для создания сервиса синхронизации.
@@ -240,7 +234,9 @@ def get_sync_service(
             raise ValueError("Для ручной синхронизации необходимо передать products_data")
         return ManualSupplierSyncService(supplier, products_data)
     else:
-        raise NotImplementedError(f"Метод синхронизации {supplier.sync_method} ещё не реализован")
+        raise NotImplementedError(
+            f"Метод синхронизации {supplier.sync_method} ещё не реализован"
+        )
 
 
 # ─── Helper Functions ─────────────────────────────────────────────────────────
@@ -270,6 +266,6 @@ def sync_all_active_suppliers(triggered_by: str = "celery") -> list[SupplierCata
             sync_record = sync_supplier(supplier.id, triggered_by=triggered_by)
             results.append(sync_record)
         except Exception as e:
-            logger.error(f"Ошибка синхронизации {supplier.name}: {e}")
+            logger.error("Ошибка синхронизации %s: %s", supplier.name, e)
 
     return results

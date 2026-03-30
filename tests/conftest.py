@@ -21,6 +21,7 @@ from suppliers.models import (
     SupplierCredential,
     SupplierStockRecord,
 )
+from suppliers.service.dto import SupplierProductDTO
 
 # ─── Currency Fixtures ────────────────────────────────────────────────────────
 
@@ -200,7 +201,6 @@ def product_test(db):
     return Product.objects.create(
         title="Test Product",
         upc="123456789012",
-        is_available=True,
     )
 
 
@@ -210,7 +210,6 @@ def product_test_2(db):
     return Product.objects.create(
         title="Test Product 2",
         upc="123456789013",
-        is_available=True,
     )
 
 
@@ -250,5 +249,45 @@ def stock_record_list(supplier_api, product_test, product_test_2, rub):
             currency=rub,
             num_in_stock=50,
             is_active=True,
+        ),
+    ]
+
+
+@pytest.fixture
+def product_data_valid(product_test, rub):
+    """Валидный DTO товара для тестов."""
+    return SupplierProductDTO(
+        supplier_sku="ART-001",
+        price=Decimal("999.99"),
+        currency_code="RUB",
+        num_in_stock=100,
+        product_upc="123456789012",
+    )
+
+
+@pytest.fixture
+def product_data_list(product_test, product_test_2, rub):
+    """Список DTO товаров для тестов."""
+    return [
+        SupplierProductDTO(
+            supplier_sku="ART-001",
+            price=Decimal("999.99"),
+            currency_code="RUB",
+            num_in_stock=100,
+            product_upc="123456789012",
+        ),
+        SupplierProductDTO(
+            supplier_sku="ART-002",
+            price=Decimal("1499.50"),
+            currency_code="RUB",
+            num_in_stock=50,
+            product_upc="123456789013",
+        ),
+        SupplierProductDTO(
+            supplier_sku="ART-003",
+            price=Decimal("299.00"),
+            currency_code="RUB",
+            num_in_stock=200,
+            product_upc=None,
         ),
     ]
