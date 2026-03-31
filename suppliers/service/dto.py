@@ -7,9 +7,10 @@ Data Transfer Objects для передачи данных между слоям
 from decimal import Decimal
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
 from helpers.arithmetic import round_decimal
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,7 @@ SupplierSku = Annotated[str, Field(min_length=1, description="Артикул п�
 Price = Annotated[Decimal, Field(ge=0, description="Цена товара")]
 CurrencyCode = Annotated[str, Field(min_length=3, description="Код валюты (ISO 4217)")]
 NumInStock = Annotated[int, Field(ge=0, description="Количество на складе")]
-BatchSize = Annotated[int, Field(gt=0, le=10000, description="Размер батча")]
+BatchSize = Annotated[int, Field(gt=0, description="Размер батча")]
 TimeoutSeconds = Annotated[int, Field(gt=0, description="Таймаут в секундах")]
 
 
@@ -47,16 +48,6 @@ class SupplierProductDTO(BaseModel):
     product_upc: Annotated[str | None, Field(description="UPC товара")] = None
     product_title: Annotated[str | None, Field(description="Название товара")] = None
     extra_data: Annotated[dict[str, Any] | None, Field(description="Дополнительные данные")] = None
-
-    @field_validator("supplier_sku")
-    @classmethod
-    def sku_must_be_uppercase(cls, v: str) -> str:
-        return v.strip().upper()
-
-    @field_validator("currency_code")
-    @classmethod
-    def currency_code_must_be_uppercase(cls, v: str) -> str:
-        return v.strip().upper()
 
     def __hash__(self):
         return hash((self.supplier_sku, self.price, self.num_in_stock))
@@ -85,14 +76,6 @@ class SyncResultDTO(BaseModel):
     stock_before: NumInStock | None = None
     stock_after: NumInStock | None = None
 
-    @property
-    def success(self) -> bool:
-        return not self.failed
-
-    @property
-    def has_changes(self) -> bool:
-        return self.price_changed or self.stock_changed
-
 
 # ─── Sync Stats DTO ───────────────────────────────────────────────────────────
 
@@ -100,28 +83,40 @@ class SyncResultDTO(BaseModel):
 class SyncStatsDTO(BaseModel):
     """
     Статистика синхронизации каталога.
+    
+    total — расчётное поле (сумма всех счётчиков).
     """
 
     model_config = DTOConfig
 
-    created: int = 0
-    updated: int = 0
-    skipped: int = 0
-    failed: int = 0
+    created: int = Field(default=0, ge=0, description="Создано")
+    updated: int = Field(default=0, ge=0, description="Обновлено")
+    skipped: int = Field(default=0, ge=0, description="Пропущено")
+    failed: int = Field(default=0, ge=0, description="Ошибок")
 
     @property
     def total(self) -> int:
+        """
+        Расчётное поле: общая сумма всех счётчиков.
+        """
         return self.created + self.updated + self.skipped + self.failed
 
     @property
     def success_rate(self) -> Decimal:
+        """Процент успешных операций."""
         if self.total == 0:
-            return Decimal("0.0")
-        return round_decimal(Decimal(str((self.created + self.updated) / self.total)) * 100, 2)
+            return Decimal('0.0')
+        return round_decimal(Decimal(str((self.created + self.updated) / self.total) * 100), 2)
 
     @property
     def has_errors(self) -> bool:
+        """Есть ли ошибки."""
         return self.failed > 0
+
+    @property
+    def has_changes(self) -> bool:
+        """Были ли изменения."""
+        return self.created > 0 or self.updated > 0
 
 
 # ─── Sync Config DTO ──────────────────────────────────────────────────────────
@@ -137,6 +132,5 @@ class SyncConfigDTO(BaseModel):
     triggered_by: str = "celery"
     batch_size: BatchSize = 100
     timeout_seconds: TimeoutSeconds = 300
-    dry_run: bool = False
     create_missing_products: bool = False
     deactivate_missing_products: bool = False

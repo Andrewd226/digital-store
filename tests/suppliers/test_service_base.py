@@ -4,11 +4,14 @@ tests/suppliers/test_service_base.py
 Тесты для базового сервиса синхронизации.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
 
-from suppliers.models import Supplier, SupplierCatalogSync
-from suppliers.service.base import BaseService
 from suppliers.service.dto import SupplierProductDTO, SyncResultDTO, SyncStatsDTO
+from suppliers.service.base import BaseService
+from suppliers.models import Supplier, SupplierCatalogSync
+
 
 # ─── Mock Service for Testing ─────────────────────────────────────────────────
 
@@ -57,7 +60,8 @@ class TestBaseService:
         """Завершение синхронизации с успехом."""
         service = MockSyncService(supplier_api)
         service.start_sync()
-        service.stats.total = 10
+        
+        # Устанавливаем только счётчики, total рассчитается автоматически
         service.stats.created = 5
         service.stats.updated = 3
         service.stats.skipped = 2
@@ -67,7 +71,7 @@ class TestBaseService:
 
         assert sync_record.status == SupplierCatalogSync.Status.SUCCESS
         assert sync_record.finished_at is not None
-        assert sync_record.total_items == 10
+        assert sync_record.total_items == 10  # 5 + 3 + 2 + 0
         assert sync_record.created_items == 5
         assert sync_record.updated_items == 3
 
@@ -75,7 +79,7 @@ class TestBaseService:
         """Завершение синхронизации частично."""
         service = MockSyncService(supplier_api)
         service.start_sync()
-        service.stats.total = 10
+        
         service.stats.created = 5
         service.stats.failed = 2
 
@@ -87,7 +91,7 @@ class TestBaseService:
         """Завершение синхронизации с ошибкой."""
         service = MockSyncService(supplier_api)
         service.start_sync()
-        service.stats.total = 10
+        
         service.stats.failed = 10
 
         sync_record = service.complete_sync()
@@ -161,9 +165,26 @@ class TestBaseService:
     def test_get_stats(self, supplier_api):
         """Получение статистики."""
         service = MockSyncService(supplier_api)
-        service.stats.total = 10
         service.stats.created = 5
+        service.stats.updated = 3
         stats = service.get_stats()
-        assert stats.total == 10
+        assert stats.total == 8  # 5 + 3 (автоматический расчёт)
         assert stats.created == 5
         assert isinstance(stats, SyncStatsDTO)
+
+    def test_total_is_readonly(self, supplier_api):
+        """total — расчётное поле, нельзя установить напрямую."""
+        service = MockSyncService(supplier_api)
+        
+        with pytest.raises(AttributeError):
+            service.stats.total = 100  # ← Должно вызвать ошибку
+
+    def test_total_calculation(self, supplier_api):
+        """total рассчитывается из суммы счётчиков."""
+        service = MockSyncService(supplier_api)
+        service.stats.created = 10
+        service.stats.updated = 5
+        service.stats.skipped = 3
+        service.stats.failed = 2
+        
+        assert service.stats.total == 20  # 10 + 5 + 3 + 2
