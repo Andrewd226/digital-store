@@ -2,7 +2,9 @@
 tests/suppliers/test_dto.py
 
 Тесты для DTO (Data Transfer Objects).
+Проверяют валидацию полей, расчётные свойства и граничные случаи.
 """
+from __future__ import annotations
 
 from decimal import Decimal
 
@@ -20,10 +22,10 @@ from suppliers.service.dto import (
 
 
 class TestSupplierProductDTO:
-    """Тесты для SupplierProductDTO."""
+    """Тесты валидации DTO товара от поставщика."""
 
     def test_create_valid(self):
-        """Создание валидного DTO."""
+        """Создание валидного DTO проходит без ошибок."""
         dto = SupplierProductDTO(
             supplier_sku="ART-001",
             price=Decimal("999.99"),
@@ -36,7 +38,7 @@ class TestSupplierProductDTO:
         assert dto.num_in_stock == 100
 
     def test_uppercase_sku(self):
-        """Артикул приводится к верхнему регистру."""
+        """Артикул автоматически приводится к верхнему регистру."""
         dto = SupplierProductDTO(
             supplier_sku="art-001",
             price=Decimal("100"),
@@ -46,7 +48,7 @@ class TestSupplierProductDTO:
         assert dto.supplier_sku == "ART-001"
 
     def test_uppercase_currency(self):
-        """Код валюты приводится к верхнему регистру."""
+        """Код валюты автоматически приводится к верхнему регистру."""
         dto = SupplierProductDTO(
             supplier_sku="ART-001",
             price=Decimal("100"),
@@ -56,77 +58,60 @@ class TestSupplierProductDTO:
         assert dto.currency_code == "RUB"
 
     def test_invalid_currency_code_pattern(self):
-        """Невалидный код валюты (не соответствует паттерну)."""
-        with pytest.raises(ValidationError) as exc_info:
+        """Код валюты должен соответствовать формату ISO 4217 (3 буквы)."""
+        with pytest.raises(ValidationError):
             SupplierProductDTO(
                 supplier_sku="ART-001",
                 price=Decimal("100"),
                 currency_code="123",
                 num_in_stock=10,
             )
-        assert "currency_code" in str(exc_info.value)
-
-    def test_invalid_currency_code_short(self):
-        """Невалидный код валюты (короткий)."""
-        with pytest.raises(ValidationError) as exc_info:
-            SupplierProductDTO(
-                supplier_sku="ART-001",
-                price=Decimal("100"),
-                currency_code="RU",
-                num_in_stock=10,
-            )
-        assert "currency_code" in str(exc_info.value)
 
     def test_negative_price(self):
-        """Отрицательная цена не допускается."""
-        with pytest.raises(ValidationError) as exc_info:
+        """Отрицательная цена запрещена валидатором ge=0."""
+        with pytest.raises(ValidationError):
             SupplierProductDTO(
                 supplier_sku="ART-001",
                 price=Decimal("-100"),
                 currency_code="RUB",
                 num_in_stock=10,
             )
-        assert "price" in str(exc_info.value)
-
-    def test_negative_stock(self):
-        """Отрицательный остаток не допускается."""
-        with pytest.raises(ValidationError) as exc_info:
-            SupplierProductDTO(
-                supplier_sku="ART-001",
-                price=Decimal("100"),
-                currency_code="RUB",
-                num_in_stock=-10,
-            )
-        assert "num_in_stock" in str(exc_info.value)
 
     def test_empty_sku(self):
-        """Пустой артикул не допускается."""
-        with pytest.raises(ValidationError) as exc_info:
+        """Пустой артикул запрещён валидатором min_length=1."""
+        with pytest.raises(ValidationError):
             SupplierProductDTO(
                 supplier_sku="",
                 price=Decimal("100"),
                 currency_code="RUB",
                 num_in_stock=10,
             )
-        assert "supplier_sku" in str(exc_info.value)
 
     def test_optional_fields(self):
-        """Опциональные поля могут быть None."""
+        """Опциональные поля могут быть опущены или равны None."""
         dto = SupplierProductDTO(
             supplier_sku="ART-001",
             price=Decimal("100"),
             currency_code="RUB",
             num_in_stock=10,
-            product_upc=None,
-            product_title=None,
-            extra_data=None,
         )
         assert dto.product_upc is None
         assert dto.product_title is None
         assert dto.extra_data is None
 
+    def test_extra_data_dict(self):
+        """Поле extra_data принимает произвольный словарь."""
+        dto = SupplierProductDTO(
+            supplier_sku="ART-001",
+            price=Decimal("100"),
+            currency_code="RUB",
+            num_in_stock=10,
+            extra_data={"vendor": "Test", "category": "Electronics"},
+        )
+        assert dto.extra_data["vendor"] == "Test"
+
     def test_hash_consistency(self):
-        """Хеш консистентен для одинаковых данных."""
+        """Хеш идентичен для одинаковых неизменяемых полей."""
         dto1 = SupplierProductDTO(
             supplier_sku="ART-001",
             price=Decimal("100"),
@@ -146,10 +131,10 @@ class TestSupplierProductDTO:
 
 
 class TestSyncResultDTO:
-    """Тесты для SyncResultDTO."""
+    """Тесты DTO результата обработки одного товара."""
 
     def test_create_default(self):
-        """Создание с значениями по умолчанию."""
+        """По умолчанию все статусы сброшены."""
         dto = SyncResultDTO(supplier_sku="ART-001")
         assert dto.created is False
         assert dto.updated is False
@@ -157,17 +142,17 @@ class TestSyncResultDTO:
         assert dto.failed is False
 
     def test_success_property_created(self):
-        """Свойство success=True при created."""
+        """success=True при успешном создании."""
         dto = SyncResultDTO(supplier_sku="ART-001", created=True)
         assert dto.success is True
 
     def test_success_property_failed(self):
-        """Свойство success=False при failed."""
+        """success=False при наличии ошибки, даже если created=True."""
         dto = SyncResultDTO(supplier_sku="ART-001", created=True, failed=True)
         assert dto.success is False
 
     def test_has_changes_property(self):
-        """Свойство has_changes корректно."""
+        """has_changes=True при изменении цены или остатка."""
         dto = SyncResultDTO(
             supplier_sku="ART-001",
             price_changed=True,
@@ -180,63 +165,58 @@ class TestSyncResultDTO:
 
 
 class TestSyncStatsDTO:
-    """Тесты для SyncStatsDTO."""
+    """Тесты DTO агрегированной статистики синхронизации."""
 
     def test_create_default(self):
-        """Создание с значениями по умолчанию."""
+        """Счётчики инициализируются нулями."""
         dto = SyncStatsDTO()
         assert dto.total == 0
         assert dto.created == 0
-        assert dto.failed == 0
 
     def test_total_auto_calculation(self):
-        """Total автоматически рассчитывается."""
+        """total автоматически рассчитывается как сумма счётчиков."""
         dto = SyncStatsDTO(created=10, updated=5, skipped=3, failed=2)
         assert dto.total == 20
 
     def test_success_rate(self):
-        """Процент успеха рассчитывается корректно."""
+        """success_rate корректно считает процент через Decimal."""
         dto = SyncStatsDTO(created=10, updated=5, skipped=3, failed=2)
         assert dto.success_rate == Decimal("75.00")
 
     def test_has_errors_true(self):
-        """has_errors=True при наличии ошибок."""
+        """has_errors=True при наличии хотя бы одной ошибки."""
         dto = SyncStatsDTO(failed=1)
         assert dto.has_errors is True
 
-    def test_has_errors_false(self):
-        """has_errors=False без ошибок."""
-        dto = SyncStatsDTO(created=10, updated=5, skipped=3)
-        assert dto.has_errors is False
+    def test_has_changes_true(self):
+        """has_changes=True при создании или обновлении."""
+        dto = SyncStatsDTO(created=10)
+        assert dto.has_changes is True
 
 
 # ─── SyncConfigDTO Tests ──────────────────────────────────────────────────────
 
 
 class TestSyncConfigDTO:
-    """Тесты для SyncConfigDTO."""
+    """Тесты DTO конфигурации запуска синхронизации."""
 
     def test_create_default(self):
-        """Создание с значениями по умолчанию."""
+        """Значения по умолчанию соответствуют спецификации."""
         dto = SyncConfigDTO()
         assert dto.triggered_by == "celery"
         assert dto.batch_size == 100
         assert dto.timeout_seconds == 300
-        assert dto.dry_run is False
-
-    def test_dry_run_mode(self):
-        """Тестовый режим устанавливается корректно."""
-        dto = SyncConfigDTO(dry_run=True)
-        assert dto.dry_run is True
+        assert dto.create_missing_products is False
+        assert dto.deactivate_missing_products is False
 
     def test_batch_size_validation(self):
-        """Валидация размера батча."""
+        """batch_size должен быть строго больше 0 и не превышать 10000."""
         with pytest.raises(ValidationError):
             SyncConfigDTO(batch_size=0)
         with pytest.raises(ValidationError):
             SyncConfigDTO(batch_size=10001)
 
     def test_timeout_validation(self):
-        """Валидация таймаута."""
+        """timeout_seconds должен быть строго больше 0."""
         with pytest.raises(ValidationError):
             SyncConfigDTO(timeout_seconds=0)

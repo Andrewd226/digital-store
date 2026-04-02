@@ -1,12 +1,16 @@
 """
 tests/suppliers/test_dao.py
 
-Тесты для DAO (Data Access Object) модуля suppliers.
+Тесты для слоя доступа к данным (DAO).
+Проверяют корректность ORM-запросов, обработку отсутствующих записей
+и безопасность передачи параметров.
 """
+from __future__ import annotations
 
 from decimal import Decimal
 
 import pytest
+import time
 
 from suppliers.models import Supplier, SupplierStockRecord
 from suppliers.service.dao import (
@@ -21,9 +25,8 @@ from suppliers.service.dao import (
 # ─── SupplierDAO Tests ────────────────────────────────────────────────────────
 
 
-@pytest.mark.django_db
 class TestSupplierDAO:
-    """Тесты для SupplierDAO."""
+    """Тесты поиска и фильтрации поставщиков."""
 
     def test_get_by_id(self, supplier_api):
         supplier = SupplierDAO.get_by_id(supplier_api.id)
@@ -61,9 +64,8 @@ class TestSupplierDAO:
 # ─── SupplierStockRecordDAO Tests ─────────────────────────────────────────────
 
 
-@pytest.mark.django_db
 class TestSupplierStockRecordDAO:
-    """Тесты для SupplierStockRecordDAO."""
+    """Тесты управления остатками и ценами поставщиков."""
 
     def test_get_by_supplier_product(self, stock_record):
         record = SupplierStockRecordDAO.get_by_supplier_product(
@@ -157,9 +159,8 @@ class TestSupplierStockRecordDAO:
 # ─── SupplierStockHistoryDAO Tests ────────────────────────────────────────────
 
 
-@pytest.mark.django_db
 class TestSupplierStockHistoryDAO:
-    """Тесты для SupplierStockHistoryDAO."""
+    """Тесты append-only истории изменений."""
 
     def test_create(self, stock_record, supplier_api):
         history = SupplierStockHistoryDAO.create(
@@ -181,17 +182,14 @@ class TestSupplierStockHistoryDAO:
 
     def test_get_by_stock_record(self, stock_record):
         SupplierStockHistoryDAO.create(
-            stock_record=stock_record,
-            sync=None,
+            stock_record=stock_record, sync=None,
             snapshot_supplier_name=stock_record.supplier.name,
             snapshot_product_title=stock_record.product.title,
             snapshot_product_upc=stock_record.product.upc or "",
             snapshot_supplier_sku=stock_record.supplier_sku,
             snapshot_currency_code=stock_record.currency.currency_code,
-            price_before=None,
-            price_after=Decimal("999.99"),
-            num_in_stock_before=None,
-            num_in_stock_after=100,
+            price_before=None, price_after=Decimal("999.99"),
+            num_in_stock_before=None, num_in_stock_after=100,
             change_type="created",
         )
         history = SupplierStockHistoryDAO.get_by_stock_record(stock_record)
@@ -199,17 +197,14 @@ class TestSupplierStockHistoryDAO:
 
     def test_get_by_supplier(self, supplier_api, stock_record):
         SupplierStockHistoryDAO.create(
-            stock_record=stock_record,
-            sync=None,
+            stock_record=stock_record, sync=None,
             snapshot_supplier_name=supplier_api.name,
             snapshot_product_title=stock_record.product.title,
             snapshot_product_upc=stock_record.product.upc or "",
             snapshot_supplier_sku=stock_record.supplier_sku,
             snapshot_currency_code=stock_record.currency.currency_code,
-            price_before=None,
-            price_after=Decimal("999.99"),
-            num_in_stock_before=None,
-            num_in_stock_after=100,
+            price_before=None, price_after=Decimal("999.99"),
+            num_in_stock_before=None, num_in_stock_after=100,
             change_type="created",
         )
         history = SupplierStockHistoryDAO.get_by_supplier(supplier_api)
@@ -219,14 +214,12 @@ class TestSupplierStockHistoryDAO:
 # ─── SupplierCatalogSyncDAO Tests ─────────────────────────────────────────────
 
 
-@pytest.mark.django_db
 class TestSupplierCatalogSyncDAO:
-    """Тесты для SupplierCatalogSyncDAO."""
+    """Тесты логов синхронизаций."""
 
     def test_create_running(self, supplier_api):
         sync = SupplierCatalogSyncDAO.create_running(
-            supplier=supplier_api,
-            triggered_by="pytest",
+            supplier=supplier_api, triggered_by="pytest"
         )
         assert sync.supplier == supplier_api
         assert sync.status == "running"
@@ -235,14 +228,9 @@ class TestSupplierCatalogSyncDAO:
     def test_complete(self, supplier_api):
         sync = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
         completed = SupplierCatalogSyncDAO.complete(
-            sync_record=sync,
-            status="success",
-            total_items=10,
-            created_items=5,
-            updated_items=3,
-            skipped_items=1,
-            failed_items=1,
-            error_log="",
+            sync_record=sync, status="success", total_items=10,
+            created_items=5, updated_items=3, skipped_items=1,
+            failed_items=1, error_log="",
         )
         assert completed.status == "success"
         assert completed.total_items == 10
@@ -255,8 +243,6 @@ class TestSupplierCatalogSyncDAO:
         assert syncs.count() == 2
 
     def test_get_last_sync(self, supplier_api):
-        import time
-
         sync1 = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
         time.sleep(0.01)
         sync2 = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
@@ -267,9 +253,8 @@ class TestSupplierCatalogSyncDAO:
 # ─── ProductDAO Tests ─────────────────────────────────────────────────────────
 
 
-@pytest.mark.django_db
 class TestProductDAO:
-    """Тесты для ProductDAO."""
+    """Тесты поиска товаров по UPC. Проверяют безопасность передачи параметров."""
 
     def test_get_by_upc(self, product_test):
         product = ProductDAO.get_by_upc("123456789012")
@@ -277,6 +262,11 @@ class TestProductDAO:
 
     def test_get_by_upc_not_found(self):
         product = ProductDAO.get_by_upc("NONEXISTENT123")
+        assert product is None
+
+    def test_get_by_upc_empty_string(self):
+        """get_by_upc безопасно возвращает None при пустой строке."""
+        product = ProductDAO.get_by_upc("")
         assert product is None
 
     def test_get_by_upc_list(self, product_test, product_test_2):
@@ -287,9 +277,8 @@ class TestProductDAO:
 # ─── CurrencyDAO Tests ────────────────────────────────────────────────────────
 
 
-@pytest.mark.django_db
 class TestCurrencyDAO:
-    """Тесты для CurrencyDAO."""
+    """Тесты работы со справочником валют."""
 
     def test_get_by_code(self, rub):
         currency = CurrencyDAO.get_by_code("RUB")
