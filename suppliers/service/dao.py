@@ -111,6 +111,7 @@ class SupplierStockRecordDAO:
         supplier_sku: str,
         num_in_stock: int,
         currency: Currency,
+        num_allocated: int | None = None,
     ) -> SupplierStockRecord:
         """
         Обновляет запись остатка.
@@ -123,6 +124,8 @@ class SupplierStockRecordDAO:
         stock_record.num_in_stock = num_in_stock
         stock_record.currency = currency
         stock_record.is_active = True
+        if num_allocated is not None:
+            stock_record.num_allocated = num_allocated
         stock_record.save(
             update_fields=[
                 "price",
