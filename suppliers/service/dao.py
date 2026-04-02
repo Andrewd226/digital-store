@@ -2,13 +2,17 @@
 suppliers/service/dao.py
 
 Data Access Object (DAO) для работы с базой данных.
-Все операции с БД должны выполняться через этот слой.
+Все операции с БД должны выполняться исключительно через этот слой.
+Это обеспечивает изоляцию бизнес-логики от ORM-запросов, упрощает тестирование
+и предотвращает дублирование запросов в сервисах.
 """
+from __future__ import annotations
 
 import logging
 from decimal import Decimal
 
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from core.models import Currency
 from catalogue.models import Product
@@ -25,15 +29,15 @@ logger = logging.getLogger(__name__)
 
 # ─── Supplier DAO ─────────────────────────────────────────────────────────────
 
-
 class SupplierDAO:
     """
     DAO для операций с поставщиками.
+    Содержит методы поиска, фильтрации и получения учётных данных.
     """
 
     @staticmethod
     def get_by_id(supplier_id: int) -> Supplier | None:
-        """Получает поставщика по ID."""
+        """Получает поставщика по первичному ключу."""
         try:
             return Supplier.objects.get(id=supplier_id)
         except Supplier.DoesNotExist:
@@ -41,7 +45,7 @@ class SupplierDAO:
 
     @staticmethod
     def get_by_code(code: str) -> Supplier | None:
-        """Получает поставщика по коду."""
+        """Получает поставщика по уникальному коду (slug)."""
         try:
             return Supplier.objects.get(code=code)
         except Supplier.DoesNotExist:
@@ -49,12 +53,12 @@ class SupplierDAO:
 
     @staticmethod
     def get_active_suppliers() -> QuerySet[Supplier]:
-        """Возвращает queryset активных поставщиков."""
+        """Возвращает queryset всех активных поставщиков."""
         return Supplier.objects.filter(supplier_is_active=True)
 
     @staticmethod
     def get_active_by_sync_method(sync_method: str) -> QuerySet[Supplier]:
-        """Возвращает активных поставщиков по методу синхронизации."""
+        """Возвращает активных поставщиков с конкретным методом синхронизации."""
         return Supplier.objects.filter(
             supplier_is_active=True,
             sync_method=sync_method,
@@ -62,7 +66,7 @@ class SupplierDAO:
 
     @staticmethod
     def get_credential(supplier: Supplier) -> SupplierCredential | None:
-        """Получает учётные данные поставщика."""
+        """Получает зашифрованные учётные данные поставщика."""
         try:
             return SupplierCredential.objects.get(supplier=supplier)
         except SupplierCredential.DoesNotExist:
@@ -71,20 +75,17 @@ class SupplierDAO:
 
 # ─── SupplierStockRecord DAO ──────────────────────────────────────────────────
 
-
 class SupplierStockRecordDAO:
     """
-    DAO для операций с записями остатков поставщиков.
+    DAO для операций с актуальными остатками и ценами поставщиков.
+    Отвечает за поиск, создание, обновление и деактивацию записей.
     """
 
     @staticmethod
     def get_by_supplier_product(supplier: Supplier, product: Product) -> SupplierStockRecord | None:
-        """Получает запись остатка по поставщику и товару."""
+        """Получает запись остатка по связке поставщик-товар."""
         try:
-            return SupplierStockRecord.objects.get(
-                supplier=supplier,
-                product=product,
-            )
+            return SupplierStockRecord.objects.get(supplier=supplier, product=product)
         except SupplierStockRecord.DoesNotExist:
             return None
 
@@ -93,10 +94,9 @@ class SupplierStockRecordDAO:
         supplier: Supplier, product: Product, defaults: dict
     ) -> tuple[SupplierStockRecord, bool]:
         """
-        Находит или создаёт запись остатка.
-
+        Находит существующую запись или создаёт новую.
         Returns:
-            (record, created) — запись и флаг создания
+            (record, created) — кортеж из экземпляра модели и флага создания.
         """
         return SupplierStockRecord.objects.get_or_create(
             supplier=supplier,
@@ -113,10 +113,8 @@ class SupplierStockRecordDAO:
         currency: Currency,
     ) -> SupplierStockRecord:
         """
-        Обновляет запись остатка.
-
-        Returns:
-            Обновлённая запись
+        Обновляет параметры поставки (цена, артикул, остаток, валюта).
+        Активирует запись, если она была ранее деактивирована.
         """
         stock_record.price = price
         stock_record.supplier_sku = supplier_sku
@@ -137,49 +135,41 @@ class SupplierStockRecordDAO:
 
     @staticmethod
     def get_active_by_supplier(supplier: Supplier) -> QuerySet[SupplierStockRecord]:
-        """Возвращает активные записи остатков поставщика."""
-        return SupplierStockRecord.objects.filter(
-            supplier=supplier,
-            is_active=True,
-        )
+        """Возвращает queryset активных записей остатков конкретного поставщика."""
+        return SupplierStockRecord.objects.filter(supplier=supplier, is_active=True)
 
     @staticmethod
     def get_by_supplier_sku(supplier: Supplier, supplier_sku: str) -> SupplierStockRecord | None:
-        """Получает запись по артикулу поставщика."""
+        """Получает запись по внутреннему артикулу поставщика."""
         try:
-            return SupplierStockRecord.objects.get(
-                supplier=supplier,
-                supplier_sku=supplier_sku,
-            )
+            return SupplierStockRecord.objects.get(supplier=supplier, supplier_sku=supplier_sku)
         except SupplierStockRecord.DoesNotExist:
             return None
 
     @staticmethod
     def deactivate_missing(supplier: Supplier, active_skus: list[str]) -> int:
         """
-        Деактивирует записи, отсутствующие в списке активных SKU.
-
+        Деактивирует записи товаров, которые отсутствуют в текущей выгрузке поставщика.
+        Используется для корректной обработки удалённых или снятых с производства товаров.
         Returns:
-            Количество деактивированных записей
+            Количество деактивированных записей.
         """
         deactivated = (
-            SupplierStockRecord.objects.filter(
-                supplier=supplier,
-                is_active=True,
-            )
+            SupplierStockRecord.objects.filter(supplier=supplier, is_active=True)
             .exclude(supplier_sku__in=active_skus)
             .update(is_active=False)
         )
-        logger.info("Деактивировано %d записей остатков для %s", deactivated, supplier.name)
+        if deactivated > 0:
+            logger.info("Деактивировано %d записей остатков для %s", deactivated, supplier.name)
         return deactivated
 
 
 # ─── SupplierStockHistory DAO ─────────────────────────────────────────────────
 
-
 class SupplierStockHistoryDAO:
     """
-    DAO для операций с историей изменений остатков.
+    DAO для операций с историей изменений цен и остатков.
+    История пишется только методом CREATE (append-only), удаление запрещено.
     """
 
     @staticmethod
@@ -198,10 +188,8 @@ class SupplierStockHistoryDAO:
         change_type: str,
     ) -> SupplierStockHistory:
         """
-        Создаёт запись в истории изменений.
-
-        Returns:
-            Созданная запись истории
+        Создаёт снимок изменения в истории.
+        Все параметры передаются явно для гарантии целостности снимка.
         """
         return SupplierStockHistory.objects.create(
             stock_record=stock_record,
@@ -222,45 +210,35 @@ class SupplierStockHistoryDAO:
     def get_by_stock_record(
         stock_record: SupplierStockRecord, limit: int | None = None
     ) -> QuerySet[SupplierStockHistory]:
-        """Возвращает историю по записи остатка."""
+        """Возвращает историю изменений конкретной записи остатка (от новых к старым)."""
         qs = SupplierStockHistory.objects.filter(stock_record=stock_record).order_by("-recorded_at")
-        if limit:
-            qs = qs[:limit]
-        return qs
+        return qs[:limit] if limit else qs
 
     @staticmethod
     def get_by_supplier(
         supplier: Supplier, limit: int | None = None
     ) -> QuerySet[SupplierStockHistory]:
-        """Возвращает историю по поставщику."""
-        qs = SupplierStockHistory.objects.filter(stock_record__supplier=supplier).order_by(
-            "-recorded_at"
-        )
-        if limit:
-            qs = qs[:limit]
-        return qs
+        """Возвращает общую историю изменений для всех товаров поставщика."""
+        qs = SupplierStockHistory.objects.filter(stock_record__supplier=supplier).order_by("-recorded_at")
+        return qs[:limit] if limit else qs
 
 
 # ─── SupplierCatalogSync DAO ──────────────────────────────────────────────────
 
-
 class SupplierCatalogSyncDAO:
     """
-    DAO для операций с записями синхронизации.
+    DAO для управления логами синхронизаций.
+    Отвечает за создание записей о запуске и завершении задач.
     """
 
     @staticmethod
     def create_running(supplier: Supplier, triggered_by: str = "celery") -> SupplierCatalogSync:
-        """
-        Создаёт запись о начале синхронизации.
-
-        Returns:
-            Созданная запись синхронизации
-        """
+        """Создаёт запись о начале процесса синхронизации."""
         return SupplierCatalogSync.objects.create(
             supplier=supplier,
             status=SupplierCatalogSync.Status.RUNNING,
             triggered_by=triggered_by,
+            started_at=timezone.now(),
         )
 
     @staticmethod
@@ -275,13 +253,8 @@ class SupplierCatalogSyncDAO:
         error_log: str = "",
     ) -> SupplierCatalogSync:
         """
-        Завершает синхронизацию.
-
-        Returns:
-            Обновлённая запись синхронизации
+        Фиксирует завершение синхронизации: статус, статистику, время окончания и лог ошибок.
         """
-        from django.utils import timezone
-
         sync_record.status = status
         sync_record.finished_at = timezone.now()
         sync_record.total_items = total_items
@@ -289,6 +262,7 @@ class SupplierCatalogSyncDAO:
         sync_record.updated_items = updated_items
         sync_record.skipped_items = skipped_items
         sync_record.failed_items = failed_items
+        # Ограничиваем длину лога, чтобы избежать переполнения поля БД
         sync_record.error_log = error_log[:65535] if error_log else ""
         sync_record.save(
             update_fields=[
@@ -305,32 +279,31 @@ class SupplierCatalogSyncDAO:
         return sync_record
 
     @staticmethod
-    def get_by_supplier(
-        supplier: Supplier, limit: int | None = None
-    ) -> QuerySet[SupplierCatalogSync]:
-        """Возвращает записи синхронизации по поставщику."""
+    def get_by_supplier(supplier: Supplier, limit: int | None = None) -> QuerySet[SupplierCatalogSync]:
+        """Возвращает историю запусков синхронизации для поставщика (от новых к старым)."""
         qs = SupplierCatalogSync.objects.filter(supplier=supplier).order_by("-started_at")
-        if limit:
-            qs = qs[:limit]
-        return qs
+        return qs[:limit] if limit else qs
 
     @staticmethod
     def get_last_sync(supplier: Supplier) -> SupplierCatalogSync | None:
-        """Возвращает последнюю синхронизацию поставщика."""
+        """Возвращает самую последнюю запись синхронизации."""
         return SupplierCatalogSyncDAO.get_by_supplier(supplier, limit=1).first()
 
 
 # ─── Product DAO ──────────────────────────────────────────────────────────────
 
-
 class ProductDAO:
     """
-    DAO для операций с товарами (внешняя зависимость).
+    DAO для операций с товарами каталога.
+    Вынесен в отдельный класс для соблюдения границ ответственности.
     """
 
     @staticmethod
     def get_by_upc(upc: str) -> Product | None:
-        """Получает товар по UPC."""
+        """
+        Получает товар по универсальному коду (UPC).
+        Безопасно обрабатывает пустые строки, предотвращая SQL-ошибки.
+        """
         if not upc:
             return None
         try:
@@ -340,21 +313,20 @@ class ProductDAO:
 
     @staticmethod
     def get_by_upc_list(upc_list: list[str]) -> QuerySet[Product]:
-        """Возвращает товары по списку UPC."""
+        """Возвращает queryset товаров по списку UPC (использует SQL IN)."""
         return Product.objects.filter(upc__in=upc_list)
 
 
 # ─── Currency DAO ─────────────────────────────────────────────────────────────
 
-
 class CurrencyDAO:
     """
-    DAO для операций с валютами (внешняя зависимость).
+    DAO для операций со справочником валют.
     """
 
     @staticmethod
     def get_by_code(currency_code: str) -> Currency | None:
-        """Получает валюту по коду."""
+        """Получает валюту по ISO-коду (например, 'USD', 'RUB')."""
         try:
             return Currency.objects.get(currency_code=currency_code)
         except Currency.DoesNotExist:
@@ -362,5 +334,5 @@ class CurrencyDAO:
 
     @staticmethod
     def get_active() -> QuerySet[Currency]:
-        """Возвращает все валюты."""
+        """Возвращает все доступные в системе валюты."""
         return Currency.objects.all()

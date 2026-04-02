@@ -2,7 +2,11 @@
 suppliers/service/sync.py
 
 Сервисы синхронизации каталогов поставщиков.
+Реализует бизнес-логику обработки товаров, делегируя операции с БД слою DAO.
+Поддерживает различные источники данных: REST API, ручную загрузку, 
+а также расширяем под FTP/Email через наследование.
 """
+from __future__ import annotations
 
 import logging
 from decimal import Decimal
@@ -11,11 +15,7 @@ from typing import Any
 import httpx
 
 from helpers.arithmetic import round_decimal
-from suppliers.models import (
-    Supplier,
-    SupplierCatalogSync,
-    SupplierStockHistory,
-)
+from suppliers.models import Supplier, SupplierCatalogSync, SupplierStockHistory
 from suppliers.service.base import BaseService
 from suppliers.service.dao import (
     CurrencyDAO,
@@ -35,28 +35,34 @@ logger = logging.getLogger(__name__)
 class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
     """
     Базовый сервис синхронизации поставщиков.
-    Реализует общую логику обработки товаров.
+    Содержит общую логику обработки товара: валидацию, сравнение с БД,
+    создание/обновление записей и фиксацию истории изменений.
     """
 
     def process_item(self, item: SupplierProductDTO) -> SyncResultDTO:
         """
         Обрабатывает один товар: создаёт или обновляет запись, ведёт историю.
+        Делегирует все операции с БД соответствующим DAO-классам.
         """
         result = SyncResultDTO(supplier_sku=item.supplier_sku)
 
+        # 1. Валидация валюты
         currency = CurrencyDAO.get_by_code(item.currency_code)
         if currency is None:
             result.failed = True
             result.error_message = f"Валюта не найдена: {item.currency_code}"
             return result
 
+        # 2. Поиск товара по UPC (внешняя зависимость)
         product = ProductDAO.get_by_upc(item.product_upc)
         if product is None:
             result.skipped = True
             return result
 
+        # 3. Округление цены до точности БД (25 знаков после запятой)
         price = round_decimal(item.price, 25)
 
+        # 4. Поиск или создание записи остатка
         stock_record, created = SupplierStockRecordDAO.get_or_create(
             supplier=self.supplier,
             product=product,
@@ -70,6 +76,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         )
 
         if created:
+            # Товар впервые появился у поставщика
             result.created = True
             result.price_after = price
             result.stock_after = item.num_in_stock
@@ -88,6 +95,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 change_type=SupplierStockHistory.ChangeType.CREATED,
             )
         else:
+            # Товар уже существует: проверяем изменения
             price_changed = stock_record.price != price
             stock_changed = stock_record.num_in_stock != item.num_in_stock
 
@@ -95,6 +103,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 price_before = stock_record.price
                 stock_before = stock_record.num_in_stock
 
+                # Обновляем текущие параметры
                 SupplierStockRecordDAO.update(
                     stock_record=stock_record,
                     price=price,
@@ -111,6 +120,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 result.stock_before = stock_before
                 result.stock_after = item.num_in_stock
 
+                # Фиксируем изменение в истории
                 SupplierStockHistoryDAO.create(
                     stock_record=stock_record,
                     sync=self.sync_record,
@@ -126,18 +136,18 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                     change_type=self._determine_change_type(price_changed, stock_changed),
                 )
             else:
+                # Данные не изменились
                 result.skipped = True
 
         return result
 
     def _determine_change_type(self, price_changed: bool, stock_changed: bool) -> str:
-        """Определяет тип изменения для истории."""
+        """Определяет тип изменения для корректной классификации в истории."""
         if price_changed and stock_changed:
             return SupplierStockHistory.ChangeType.BOTH_CHANGED
-        elif price_changed:
+        if price_changed:
             return SupplierStockHistory.ChangeType.PRICE_CHANGED
-        else:
-            return SupplierStockHistory.ChangeType.STOCK_CHANGED
+        return SupplierStockHistory.ChangeType.STOCK_CHANGED
 
 
 # ─── API Sync Service ─────────────────────────────────────────────────────────
@@ -146,10 +156,11 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
 class APISupplierSyncService(BaseSupplierSyncService):
     """
     Сервис синхронизации через REST API.
+    Загружает данные по HTTP, парсит ответ и передаёт в базовый процессор.
     """
 
     def fetch_data(self) -> list[SupplierProductDTO]:
-        """Загружает данные через HTTP API."""
+        """Загружает и парсит данные через HTTP API."""
         if not self.supplier.api_url:
             raise ValueError(f"API URL не настроен для поставщика {self.supplier.name}")
 
@@ -165,7 +176,8 @@ class APISupplierSyncService(BaseSupplierSyncService):
         if self.supplier.api_extra_config.get("headers"):
             headers.update(self.supplier.api_extra_config["headers"])
 
-        timeout = self.supplier.api_extra_config.get("timeout", 30)
+        # ✅ ИСПРАВЛЕНО: явное приведение к int для защиты от TypeError при чтении из JSON
+        timeout = int(self.supplier.api_extra_config.get("timeout", 30))
 
         with httpx.Client(timeout=timeout) as client:
             response = client.get(self.supplier.api_url, headers=headers)
@@ -174,8 +186,11 @@ class APISupplierSyncService(BaseSupplierSyncService):
 
         return self._parse_api_response(data)
 
-    def _parse_api_response(self, data: dict[str, Any]) -> list[SupplierProductDTO]:
-        """Парсит ответ API в список DTO."""
+    def _parse_api_response(self,  dict[str, Any]) -> list[SupplierProductDTO]:
+        """
+        Преобразует сырой JSON-ответ API в список валидированных DTO.
+        Поддерживает кастомный маппинг полей через api_extra_config.
+        """
         products = []
         items = data.get("items", data.get("products", []))
         field_mapping = self.supplier.api_extra_config.get("field_mapping", {})
@@ -205,10 +220,11 @@ class APISupplierSyncService(BaseSupplierSyncService):
 class ManualSupplierSyncService(BaseSupplierSyncService):
     """
     Сервис ручной синхронизации.
-    Данные передаются напрямую в конструктор.
+    Используется для импорта данных из CSV, Excel или прямых вызовов из кода.
+    Данные передаются напрямую в конструктор, минуя этап загрузки.
     """
 
-    def __init__(self, supplier: Supplier, products_data: list[SupplierProductDTO]):
+    def __init__(self, supplier: Supplier, products_ list[SupplierProductDTO]):
         super().__init__(supplier)
         self.products_data = products_data
 
@@ -222,26 +238,29 @@ class ManualSupplierSyncService(BaseSupplierSyncService):
 
 def get_sync_service(
     supplier: Supplier,
-    products_data: list[SupplierProductDTO] | None = None,
+    products_ list[SupplierProductDTO] | None = None,
 ) -> BaseSupplierSyncService:
     """
-    Фабричный метод для создания сервиса синхронизации.
+    Фабричный метод для выбора стратегии синхронизации.
+    Автоматически определяет тип сервиса на основе настроек поставщика.
     """
     if supplier.sync_method == Supplier.SyncMethod.API:
         return APISupplierSyncService(supplier)
-    elif supplier.sync_method == Supplier.SyncMethod.MANUAL:
+    if supplier.sync_method == Supplier.SyncMethod.MANUAL:
         if products_data is None:
             raise ValueError("Для ручной синхронизации необходимо передать products_data")
         return ManualSupplierSyncService(supplier, products_data)
-    else:
-        raise NotImplementedError(f"Метод синхронизации {supplier.sync_method} ещё не реализован")
+    raise NotImplementedError(f"Метод синхронизации {supplier.sync_method} ещё не реализован")
 
 
 # ─── Helper Functions ─────────────────────────────────────────────────────────
 
 
 def sync_supplier(supplier_id: int, triggered_by: str = "celery") -> SupplierCatalogSync:
-    """Утилита для запуска синхронизации поставщика по ID."""
+    """
+    Утилита для запуска синхронизации одного поставщика по ID.
+    Проверяет активность перед запуском.
+    """
     supplier = SupplierDAO.get_by_id(supplier_id)
 
     if supplier is None:
@@ -255,7 +274,11 @@ def sync_supplier(supplier_id: int, triggered_by: str = "celery") -> SupplierCat
 
 
 def sync_all_active_suppliers(triggered_by: str = "celery") -> list[SupplierCatalogSync]:
-    """Запускает синхронизацию всех активных поставщиков."""
+    """
+    Запускает синхронизацию всех активных поставщиков.
+    Продолжает выполнение даже при ошибках в отдельных поставщиках,
+    логгируя неудачи и возвращая список успешных записей синхронизации.
+    """
     suppliers = SupplierDAO.get_active_suppliers()
     results = []
 
