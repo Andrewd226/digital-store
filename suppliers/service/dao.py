@@ -10,6 +10,8 @@ from decimal import Decimal
 
 from django.db.models import QuerySet
 
+from core.models import Currency
+from catalogue.models import Product
 from suppliers.models import (
     Supplier,
     SupplierCatalogSync,
@@ -329,8 +331,8 @@ class ProductDAO:
     @staticmethod
     def get_by_upc(upc: str) -> Product | None:
         """Получает товар по UPC."""
-        from catalogue.models import Product
-
+        if not upc:
+            return None
         try:
             return Product.objects.get(upc=upc)
         except Product.DoesNotExist:
@@ -339,8 +341,6 @@ class ProductDAO:
     @staticmethod
     def get_by_upc_list(upc_list: list[str]) -> QuerySet[Product]:
         """Возвращает товары по списку UPC."""
-        from catalogue.models import Product
-
         return Product.objects.filter(upc__in=upc_list)
 
 
@@ -355,8 +355,6 @@ class CurrencyDAO:
     @staticmethod
     def get_by_code(currency_code: str) -> Currency | None:
         """Получает валюту по коду."""
-        from core.models import Currency
-
         try:
             return Currency.objects.get(currency_code=currency_code)
         except Currency.DoesNotExist:
@@ -365,6 +363,4 @@ class CurrencyDAO:
     @staticmethod
     def get_active() -> QuerySet[Currency]:
         """Возвращает все валюты."""
-        from core.models import Currency
-
         return Currency.objects.all()

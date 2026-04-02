@@ -134,14 +134,10 @@ class BaseService(ABC, Generic[TDTO, TResult]):
                 try:
                     result = self.process_item(item)
                     self._update_stats(result)
-                    
-                    # ← Добавлено: собираем ошибки из result.error_message
-                    if hasattr(result, "failed") and result.failed:
-                        if hasattr(result, "error_message") and result.error_message:
-                            error_msg = f"{getattr(item, 'supplier_sku', 'unknown')}: {result.error_message}"
-                            self.errors.append(error_msg)
-                            logger.error("Ошибка обработки элемента: %s", error_msg)
-                            
+                    if result.failed and result.error_message:
+                        error_msg = f"{getattr(item, 'supplier_sku', 'unknown')}: {result.error_message}"
+                        self.errors.append(error_msg)
+                        logger.error("Ошибка обработки элемента: %s", error_msg)
                 except Exception as e:
                     self.stats.failed += 1
                     error_msg = f"{getattr(item, 'supplier_sku', 'unknown')}: {e}"
