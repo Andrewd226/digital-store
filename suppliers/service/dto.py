@@ -54,7 +54,7 @@ class SupplierProductDTO(BaseModel):
     num_in_stock: NumInStock
     product_upc: Annotated[str | None, Field(description="UPC товара")] = None
     product_title: Annotated[str | None, Field(description="Название товара")] = None
-    extra_data: Annotated[dict[str, Any] | None, Field(description="Дополнительные данные")] = None
+    extra_config: Annotated[dict[str, Any] | None, Field(description="Дополнительные данные")] = None
 
 
 # ─── Sync Result DTO ──────────────────────────────────────────────────────────
