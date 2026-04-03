@@ -8,14 +8,14 @@ tests/suppliers/test_dao.py
 from __future__ import annotations
 
 from decimal import Decimal
-
-import pytest
 import time
 
+import pytest
+
+from core.dao import CurrencyDAO
+from catalogue.dao import ProductDAO
 from suppliers.models import Supplier, SupplierStockRecord
 from suppliers.service.dao import (
-    CurrencyDAO,
-    ProductDAO,
     SupplierCatalogSyncDAO,
     SupplierDAO,
     SupplierStockHistoryDAO,

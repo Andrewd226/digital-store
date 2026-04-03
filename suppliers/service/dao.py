@@ -1,10 +1,8 @@
 """
 suppliers/service/dao.py
 
-Data Access Object (DAO) для работы с базой данных.
-Все операции с БД должны выполняться исключительно через этот слой.
-Это обеспечивает изоляцию бизнес-логики от ORM-запросов, упрощает тестирование
-и предотвращает дублирование запросов в сервисах.
+Data Access Object (DAO) для работы с базой данных модуля поставщиков.
+Импортирует DAO внешних доменов (Product, Currency) для соблюдения границ.
 """
 from __future__ import annotations
 
@@ -14,8 +12,9 @@ from decimal import Decimal
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from core.models import Currency
-from catalogue.models import Product
+from core.dao import CurrencyDAO
+from catalogue.dao import ProductDAO
+
 from suppliers.models import (
     Supplier,
     SupplierCatalogSync,
@@ -45,7 +44,6 @@ class SupplierDAO:
 
     @staticmethod
     def get_by_code(code: str) -> Supplier | None:
-        """Получает поставщика по уникальному коду (slug)."""
         try:
             return Supplier.objects.get(code=code)
         except Supplier.DoesNotExist:
@@ -238,7 +236,6 @@ class SupplierCatalogSyncDAO:
             supplier=supplier,
             status=SupplierCatalogSync.Status.RUNNING,
             triggered_by=triggered_by,
-            started_at=timezone.now(),
         )
 
     @staticmethod
@@ -288,51 +285,3 @@ class SupplierCatalogSyncDAO:
     def get_last_sync(supplier: Supplier) -> SupplierCatalogSync | None:
         """Возвращает самую последнюю запись синхронизации."""
         return SupplierCatalogSyncDAO.get_by_supplier(supplier, limit=1).first()
-
-
-# ─── Product DAO ──────────────────────────────────────────────────────────────
-
-class ProductDAO:
-    """
-    DAO для операций с товарами каталога.
-    Вынесен в отдельный класс для соблюдения границ ответственности.
-    """
-
-    @staticmethod
-    def get_by_upc(upc: str) -> Product | None:
-        """
-        Получает товар по универсальному коду (UPC).
-        Безопасно обрабатывает пустые строки, предотвращая SQL-ошибки.
-        """
-        if not upc:
-            return None
-        try:
-            return Product.objects.get(upc=upc)
-        except Product.DoesNotExist:
-            return None
-
-    @staticmethod
-    def get_by_upc_list(upc_list: list[str]) -> QuerySet[Product]:
-        """Возвращает queryset товаров по списку UPC (использует SQL IN)."""
-        return Product.objects.filter(upc__in=upc_list)
-
-
-# ─── Currency DAO ─────────────────────────────────────────────────────────────
-
-class CurrencyDAO:
-    """
-    DAO для операций со справочником валют.
-    """
-
-    @staticmethod
-    def get_by_code(currency_code: str) -> Currency | None:
-        """Получает валюту по ISO-коду (например, 'USD', 'RUB')."""
-        try:
-            return Currency.objects.get(currency_code=currency_code)
-        except Currency.DoesNotExist:
-            return None
-
-    @staticmethod
-    def get_active() -> QuerySet[Currency]:
-        """Возвращает все доступные в системе валюты."""
-        return Currency.objects.all()
