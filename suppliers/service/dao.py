@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import logging
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from core.dao import CurrencyDAO
-from catalogue.dao import ProductDAO
 
 from suppliers.models import (
     Supplier,
@@ -22,6 +21,10 @@ from suppliers.models import (
     SupplierStockHistory,
     SupplierStockRecord,
 )
+
+if TYPE_CHECKING:
+    from core.models import Currency
+    from catalogue.models import Product
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +83,7 @@ class SupplierStockRecordDAO:
     """
 
     @staticmethod
-    def get_by_supplier_product(supplier: Supplier, product: Product) -> SupplierStockRecord | None:
+    def get_by_supplier_product(supplier: Supplier, product: 'Product') -> SupplierStockRecord | None:
         """Получает запись остатка по связке поставщик-товар."""
         try:
             return SupplierStockRecord.objects.get(supplier=supplier, product=product)
@@ -89,7 +92,7 @@ class SupplierStockRecordDAO:
 
     @staticmethod
     def get_or_create(
-        supplier: Supplier, product: Product, defaults: dict
+        supplier: Supplier, product: 'Product', defaults: dict
     ) -> tuple[SupplierStockRecord, bool]:
         """
         Находит существующую запись или создаёт новую.
@@ -108,7 +111,7 @@ class SupplierStockRecordDAO:
         price: Decimal,
         supplier_sku: str,
         num_in_stock: int,
-        currency: Currency,
+        currency: 'Currency',
     ) -> SupplierStockRecord:
         """
         Обновляет параметры поставки (цена, артикул, остаток, валюта).
