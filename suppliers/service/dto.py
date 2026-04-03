@@ -6,6 +6,7 @@ Data Transfer Objects (DTO) для передачи данных между сл
 """
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Any
 
@@ -15,7 +16,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # ─── Configs ──────────────────────────────────────────────────────────────────
 
-# Конфиг для входных/конфигурационных DTO (безопасны для хеширования и кеша)
 ImmutableDTOConfig = ConfigDict(
     frozen=True,
     arbitrary_types_allowed=True,
@@ -23,7 +23,6 @@ ImmutableDTOConfig = ConfigDict(
     extra="ignore",
 )
 
-# Конфиг для рабочих DTO (статистика, результаты обработки, мутируются в рантайме)
 MutableDTOConfig = ConfigDict(
     frozen=False,
     arbitrary_types_allowed=True,
@@ -55,6 +54,8 @@ class SupplierProductDTO(BaseModel):
     product_upc: Annotated[str | None, Field(description="UPC товара")] = None
     product_title: Annotated[str | None, Field(description="Название товара")] = None
     config: Annotated[dict[str, Any] | None, Field(description="Доп. данные")] = None
+    # ✅ Пункт 2: Время обновления в источнике для защиты от перезаписи новых данных старыми
+    source_updated_at: Annotated[datetime | None, Field(description="Timestamp обновления у поставщика")] = None
 
 
 # ─── Sync Result DTO ──────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ class SyncResultDTO(BaseModel):
     price_after: Price | None = None
     stock_before: NumInStock | None = None
     stock_after: NumInStock | None = None
+    skipped_reason: str | None = None  # ✅ Причина пропуска (например, "stale_data")
 
 
 # ─── Sync Stats DTO ───────────────────────────────────────────────────────────
@@ -92,7 +94,6 @@ class SyncStatsDTO(BaseModel):
 
     @property
     def total(self) -> int:
-        """Расчётное поле: общая сумма всех счётчиков."""
         return self.created + self.updated + self.skipped + self.failed
 
     @property
@@ -120,7 +121,7 @@ class SyncConfigDTO(BaseModel):
     model_config = ImmutableDTOConfig
 
     triggered_by: str = "celery"
-    batch_size: BatchSize = 100
+    batch_size: BatchSize = 500  # ✅ Уменьшен для регулярного флеша буферов
     timeout_seconds: TimeoutSeconds = 300
     create_missing_products: bool = False
     deactivate_missing_products: bool = False
