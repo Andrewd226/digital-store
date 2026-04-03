@@ -99,16 +99,16 @@ class TestSupplierProductDTO:
         assert dto.product_title is None
         assert dto.extra_config is None
 
-    def test_extra_config_dict(self):
-        """Поле extra_config принимает произвольный словарь."""
+    def test_config_dict(self):
+        """Поле config принимает произвольный словарь."""
         dto = SupplierProductDTO(
             supplier_sku="ART-001",
             price=Decimal("100"),
             currency_code="RUB",
             num_in_stock=10,
-            extra_config={"vendor": "Test", "category": "Electronics"},
+            config={"vendor": "Test", "category": "Electronics"},
         )
-        assert dto.extra_config["vendor"] == "Test"
+        assert dto.config["vendor"] == "Test"
 
     def test_hash_consistency(self):
         """Хеш идентичен для одинаковых неизменяемых полей."""

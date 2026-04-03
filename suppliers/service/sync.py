@@ -140,7 +140,7 @@ class APISupplierSyncService(BaseSupplierSyncService):
                 num_in_stock=int(item.get(mapping.get("stock", "stock"), 0)),
                 product_upc=item.get(mapping.get("upc", "upc")),
                 product_title=item.get(mapping.get("title", "title")),
-                extra_config=item,
+                config=item,
             )
 
 
