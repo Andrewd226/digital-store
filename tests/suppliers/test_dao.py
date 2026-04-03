@@ -1,9 +1,7 @@
 """
 tests/suppliers/test_dao.py
 
-Тесты для слоя доступа к данным (DAO).
-Проверяют корректность ORM-запросов, обработку отсутствующих записей
-и безопасность передачи параметров.
+Тесты для слоя доступа к данным (DAO) модуля поставщиков.
 """
 from __future__ import annotations
 
@@ -12,8 +10,6 @@ import time
 
 import pytest
 
-from core.dao import CurrencyDAO
-from catalogue.dao import ProductDAO
 from suppliers.models import Supplier, SupplierStockRecord
 from suppliers.service.dao import (
     SupplierCatalogSyncDAO,
@@ -21,6 +17,7 @@ from suppliers.service.dao import (
     SupplierStockHistoryDAO,
     SupplierStockRecordDAO,
 )
+
 
 # ─── SupplierDAO Tests ────────────────────────────────────────────────────────
 
@@ -248,47 +245,3 @@ class TestSupplierCatalogSyncDAO:
         sync2 = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
         last = SupplierCatalogSyncDAO.get_last_sync(supplier_api)
         assert last == sync2
-
-
-# ─── ProductDAO Tests ─────────────────────────────────────────────────────────
-
-
-class TestProductDAO:
-    """Тесты поиска товаров по UPC. Проверяют безопасность передачи параметров."""
-
-    def test_get_by_upc(self, product_test):
-        product = ProductDAO.get_by_upc("123456789012")
-        assert product == product_test
-
-    def test_get_by_upc_not_found(self):
-        product = ProductDAO.get_by_upc("NONEXISTENT123")
-        assert product is None
-
-    def test_get_by_upc_empty_string(self):
-        """get_by_upc безопасно возвращает None при пустой строке."""
-        product = ProductDAO.get_by_upc("")
-        assert product is None
-
-    def test_get_by_upc_list(self, product_test, product_test_2):
-        products = ProductDAO.get_by_upc_list(["123456789012", "123456789013"])
-        assert products.count() == 2
-
-
-# ─── CurrencyDAO Tests ────────────────────────────────────────────────────────
-
-
-class TestCurrencyDAO:
-    """Тесты работы со справочником валют."""
-
-    def test_get_by_code(self, rub):
-        currency = CurrencyDAO.get_by_code("RUB")
-        assert currency == rub
-
-    def test_get_by_code_not_found(self):
-        currency = CurrencyDAO.get_by_code("XXX")
-        assert currency is None
-
-    def test_get_active(self, rub, usd):
-        currencies = CurrencyDAO.get_active()
-        assert rub in currencies
-        assert usd in currencies

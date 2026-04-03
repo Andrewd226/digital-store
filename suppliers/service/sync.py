@@ -2,15 +2,13 @@
 suppliers/service/sync.py
 
 Сервисы синхронизации каталогов поставщиков.
-Реализует бизнес-логику обработки товаров, делегируя операции с БД слою DAO.
-Поддерживает различные источники данных: REST API, ручную загрузку, 
-а также расширяем под FTP/Email через наследование.
+Реализует потоковую обработку (Generators) для минимизации потребления RAM.
 """
 from __future__ import annotations
 
 import logging
 from decimal import Decimal
-from typing import Any
+from typing import Any, Iterator
 
 import httpx
 
@@ -18,12 +16,14 @@ from helpers.arithmetic import round_decimal
 from suppliers.models import Supplier, SupplierCatalogSync, SupplierStockHistory
 from suppliers.service.base import BaseService
 from suppliers.service.dao import (
-    CurrencyDAO,
-    ProductDAO,
     SupplierDAO,
     SupplierStockHistoryDAO,
     SupplierStockRecordDAO,
 )
+# ✅ Исправлено: прямые импорты после удаления Re-exports
+from core.dao import CurrencyDAO
+from catalogue.dao import ProductDAO
+
 from suppliers.service.dto import SupplierProductDTO, SyncResultDTO
 
 logger = logging.getLogger(__name__)
@@ -33,36 +33,25 @@ logger = logging.getLogger(__name__)
 
 
 class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
-    """
-    Базовый сервис синхронизации поставщиков.
-    Содержит общую логику обработки товара: валидацию, сравнение с БД,
-    создание/обновление записей и фиксацию истории изменений.
-    """
+    """Базовый сервис синхронизации поставщиков."""
 
     def process_item(self, item: SupplierProductDTO) -> SyncResultDTO:
-        """
-        Обрабатывает один товар: создаёт или обновляет запись, ведёт историю.
-        Делегирует все операции с БД соответствующим DAO-классам.
-        """
+        """Обрабатывает один товар: создаёт или обновляет запись, ведёт историю."""
         result = SyncResultDTO(supplier_sku=item.supplier_sku)
 
-        # 1. Валидация валюты
         currency = CurrencyDAO.get_by_code(item.currency_code)
         if currency is None:
             result.failed = True
             result.error_message = f"Валюта не найдена: {item.currency_code}"
             return result
 
-        # 2. Поиск товара по UPC (внешняя зависимость)
         product = ProductDAO.get_by_upc(item.product_upc)
         if product is None:
             result.skipped = True
             return result
 
-        # 3. Округление цены до точности БД (25 знаков после запятой)
         price = round_decimal(item.price, 25)
 
-        # 4. Поиск или создание записи остатка
         stock_record, created = SupplierStockRecordDAO.get_or_create(
             supplier=self.supplier,
             product=product,
@@ -76,7 +65,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         )
 
         if created:
-            # Товар впервые появился у поставщика
             result.created = True
             result.price_after = price
             result.stock_after = item.num_in_stock
@@ -95,7 +83,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 change_type=SupplierStockHistory.ChangeType.CREATED,
             )
         else:
-            # Товар уже существует: проверяем изменения
             price_changed = stock_record.price != price
             stock_changed = stock_record.num_in_stock != item.num_in_stock
 
@@ -103,7 +90,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 price_before = stock_record.price
                 stock_before = stock_record.num_in_stock
 
-                # Обновляем текущие параметры
                 SupplierStockRecordDAO.update(
                     stock_record=stock_record,
                     price=price,
@@ -120,7 +106,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 result.stock_before = stock_before
                 result.stock_after = item.num_in_stock
 
-                # Фиксируем изменение в истории
                 SupplierStockHistoryDAO.create(
                     stock_record=stock_record,
                     sync=self.sync_record,
@@ -136,7 +121,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                     change_type=self._determine_change_type(price_changed, stock_changed),
                 )
             else:
-                # Данные не изменились
                 result.skipped = True
 
         return result
@@ -154,13 +138,13 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
 
 
 class APISupplierSyncService(BaseSupplierSyncService):
-    """
-    Сервис синхронизации через REST API.
-    Загружает данные по HTTP, парсит ответ и передаёт в базовый процессор.
-    """
+    """Сервис синхронизации через REST API с поддержкой пагинации."""
 
-    def fetch_data(self) -> list[SupplierProductDTO]:
-        """Загружает и парсит данные через HTTP API."""
+    def fetch_data(self) -> Iterator[SupplierProductDTO]:
+        """
+        Загружает данные через HTTP API.
+        Поддерживает offset/cursor пагинацию для работы с большими каталогами.
+        """
         if not self.supplier.api_url:
             raise ValueError(f"API URL не настроен для поставщика {self.supplier.name}")
 
@@ -176,42 +160,55 @@ class APISupplierSyncService(BaseSupplierSyncService):
         if self.supplier.api_extra_config.get("headers"):
             headers.update(self.supplier.api_extra_config["headers"])
 
-        # ✅ ИСПРАВЛЕНО: явное приведение к int для защиты от TypeError при чтении из JSON
         timeout = int(self.supplier.api_extra_config.get("timeout", 30))
+        
+        # Поддержка пагинации (настраивается через api_extra_config)
+        pagination_config = self.supplier.api_extra_config.get("pagination", {})
+        page_param = pagination_config.get("page_param", "page")
+        page_size = pagination_config.get("page_size", 100)
+        
+        current_page = pagination_config.get("start_page", 1)
 
         with httpx.Client(timeout=timeout) as client:
-            response = client.get(self.supplier.api_url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
+            while True:
+                params = {page_param: current_page, "limit": page_size}
+                response = client.get(self.supplier.api_url, headers=headers, params=params)
+                response.raise_for_status()
+                data = response.json()
 
-        return self._parse_api_response(data)
+                # Yield постранично, не накапливая в память
+                yield from self._parse_api_response(data)
 
-    def _parse_api_response(self,  dict[str, Any]) -> list[SupplierProductDTO]:
-        """
-        Преобразует сырой JSON-ответ API в список валидированных DTO.
-        Поддерживает кастомный маппинг полей через api_extra_config.
-        """
-        products = []
+                # Проверка наличия следующей страницы
+                next_page = data.get("next_page", data.get("next"))
+                if not next_page:
+                    break
+                    
+                # Если API возвращает полный URL для next, обновляем base_url
+                if isinstance(next_page, str) and next_page.startswith("http"):
+                    self.supplier.api_url = next_page
+                    page_param = None  # Отключаем авто-подстановку params
+                else:
+                    current_page += 1
+
+    def _parse_api_response(self,  dict[str, Any]) -> Iterator[SupplierProductDTO]:
+        """Преобразует сырой JSON-ответ API в итератор валидированных DTO."""
         items = data.get("items", data.get("products", []))
         field_mapping = self.supplier.api_extra_config.get("field_mapping", {})
 
         for item in items:
-            products.append(
-                SupplierProductDTO(
-                    supplier_sku=str(item.get(field_mapping.get("sku", "sku"), "")),
-                    price=Decimal(str(item.get(field_mapping.get("price", "price"), "0"))),
-                    currency_code=item.get(
-                        field_mapping.get("currency", "currency"),
-                        self.supplier.default_currency.currency_code,
-                    ),
-                    num_in_stock=int(item.get(field_mapping.get("stock", "stock"), 0)),
-                    product_upc=item.get(field_mapping.get("upc", "upc")),
-                    product_title=item.get(field_mapping.get("title", "title")),
-                    extra_data=item,
-                )
+            yield SupplierProductDTO(
+                supplier_sku=str(item.get(field_mapping.get("sku", "sku"), "")),
+                price=Decimal(str(item.get(field_mapping.get("price", "price"), "0"))),
+                currency_code=item.get(
+                    field_mapping.get("currency", "currency"),
+                    self.supplier.default_currency.currency_code,
+                ),
+                num_in_stock=int(item.get(field_mapping.get("stock", "stock"), 0)),
+                product_upc=item.get(field_mapping.get("upc", "upc")),
+                product_title=item.get(field_mapping.get("title", "title")),
+                extra_data=item,
             )
-
-        return products
 
 
 # ─── Manual Sync Service ──────────────────────────────────────────────────────
@@ -220,17 +217,16 @@ class APISupplierSyncService(BaseSupplierSyncService):
 class ManualSupplierSyncService(BaseSupplierSyncService):
     """
     Сервис ручной синхронизации.
-    Используется для импорта данных из CSV, Excel или прямых вызовов из кода.
-    Данные передаются напрямую в конструктор, минуя этап загрузки.
+    Преобразует переданный список в генератор для единообразия API.
     """
 
     def __init__(self, supplier: Supplier, products_ list[SupplierProductDTO]):
         super().__init__(supplier)
         self.products_data = products_data
 
-    def fetch_data(self) -> list[SupplierProductDTO]:
-        """Возвращает заранее подготовленные данные."""
-        return self.products_data
+    def fetch_data(self) -> Iterator[SupplierProductDTO]:
+        """Возвращает заранее подготовленные данные как итератор."""
+        yield from self.products_data
 
 
 # ─── Factory ──────────────────────────────────────────────────────────────────
@@ -240,10 +236,7 @@ def get_sync_service(
     supplier: Supplier,
     products_ list[SupplierProductDTO] | None = None,
 ) -> BaseSupplierSyncService:
-    """
-    Фабричный метод для выбора стратегии синхронизации.
-    Автоматически определяет тип сервиса на основе настроек поставщика.
-    """
+    """Фабричный метод для выбора стратегии синхронизации."""
     if supplier.sync_method == Supplier.SyncMethod.API:
         return APISupplierSyncService(supplier)
     if supplier.sync_method == Supplier.SyncMethod.MANUAL:
@@ -257,10 +250,7 @@ def get_sync_service(
 
 
 def sync_supplier(supplier_id: int, triggered_by: str = "celery") -> SupplierCatalogSync:
-    """
-    Утилита для запуска синхронизации одного поставщика по ID.
-    Проверяет активность перед запуском.
-    """
+    """Утилита для запуска синхронизации одного поставщика по ID."""
     supplier = SupplierDAO.get_by_id(supplier_id)
 
     if supplier is None:
@@ -274,11 +264,7 @@ def sync_supplier(supplier_id: int, triggered_by: str = "celery") -> SupplierCat
 
 
 def sync_all_active_suppliers(triggered_by: str = "celery") -> list[SupplierCatalogSync]:
-    """
-    Запускает синхронизацию всех активных поставщиков.
-    Продолжает выполнение даже при ошибках в отдельных поставщиках,
-    логгируя неудачи и возвращая список успешных записей синхронизации.
-    """
+    """Запускает синхронизацию всех активных поставщиков."""
     suppliers = SupplierDAO.get_active_suppliers()
     results = []
 

@@ -3,11 +3,13 @@ suppliers/service/base.py
 
 Базовый класс для всех сервисов приложения.
 Содержит общую логику: логирование, транзакции, обработку ошибок.
+Адаптирован для работы с генераторами (потоковая обработка).
 """
+from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import Generic, Iterator, TypeVar
 
 from django.db import transaction
 
@@ -30,6 +32,7 @@ class BaseService(ABC, Generic[TDTO, TResult]):
     - Логирование
     - Обработку ошибок
     - Статистику выполнения
+    - Потоковую обработку данных (Iterator)
     """
 
     def __init__(self, supplier: Supplier):
@@ -39,10 +42,11 @@ class BaseService(ABC, Generic[TDTO, TResult]):
         self.errors: list[str] = []
 
     @abstractmethod
-    def fetch_data(self) -> list[TDTO]:
+    def fetch_data(self) -> Iterator[TDTO]:
         """
-        Загружает данные от источника.
+        Возвращает итератор с данными от источника.
         Должен быть реализован в наследнике.
+        Позволяет обрабатывать большие каталоги без загрузки в RAM.
         """
         raise NotImplementedError("Метод fetch_data должен быть реализован в наследнике")
 
@@ -56,9 +60,7 @@ class BaseService(ABC, Generic[TDTO, TResult]):
 
     @transaction.atomic
     def start_sync(self, triggered_by: str = "celery") -> SupplierCatalogSync:
-        """
-        Создаёт запись о начале синхронизации.
-        """
+        """Создаёт запись о начале синхронизации."""
         self.sync_record = SupplierCatalogSyncDAO.create_running(
             supplier=self.supplier,
             triggered_by=triggered_by,
@@ -76,9 +78,7 @@ class BaseService(ABC, Generic[TDTO, TResult]):
         status: str | None = None,
         error_log: str = "",
     ) -> SupplierCatalogSync:
-        """
-        Завершает синхронизацию, обновляет статистику.
-        """
+        """Завершает синхронизацию, обновляет статистику."""
         if not self.sync_record:
             raise RuntimeError("Синхронизация не была начата. Вызовите start_sync()")
 
@@ -118,26 +118,29 @@ class BaseService(ABC, Generic[TDTO, TResult]):
         """
         Основной метод синхронизации.
         Шаблонный метод (Template Method Pattern).
+        Работает с итераторами для экономии памяти.
         """
         try:
             self.start_sync(triggered_by=triggered_by)
 
-            items = self.fetch_data()
+            items_iter = self.fetch_data()
 
-            logger.debug(
-                "Загружено %d элементов для поставщика %s",
-                len(items),
-                self.supplier.name,
-            )
+            logger.debug("Запуск потоковой обработки для поставщика %s", self.supplier.name)
 
-            for item in items:
+            for item in items_iter:
                 try:
                     result = self.process_item(item)
                     self._update_stats(result)
-                    if result.failed and result.error_message:
+                    
+                    if hasattr(result, "failed") and result.failed and result.error_message:
                         error_msg = f"{getattr(item, 'supplier_sku', 'unknown')}: {result.error_message}"
                         self.errors.append(error_msg)
                         logger.error("Ошибка обработки элемента: %s", error_msg)
+                        
+                        # ✅ Защита от переполнения RAM при тысячах ошибок
+                        if len(self.errors) > 1000:
+                            self.errors = self.errors[-1000:] + ["... и другие ошибки (лимит логов)"]
+                            
                 except Exception as e:
                     self.stats.failed += 1
                     error_msg = f"{getattr(item, 'supplier_sku', 'unknown')}: {e}"
@@ -157,10 +160,7 @@ class BaseService(ABC, Generic[TDTO, TResult]):
         return self.sync_record
 
     def _update_stats(self, result: TResult) -> None:
-        """
-        Обновляет статистику на основе результата обработки.
-        Ожидает, что результат имеет атрибуты created/updated/skipped/failed.
-        """
+        """Обновляет статистику на основе результата обработки."""
         if hasattr(result, "created") and result.created:
             self.stats.created += 1
         if hasattr(result, "updated") and result.updated:
