@@ -18,9 +18,10 @@ from pydantic import BaseModel, ConfigDict, Field
 # ─── Config ───────────────────────────────────────────────────────────────────
 
 DTOConfig = ConfigDict(
-    arbitrary_types_allowed=True,  # Разрешаем кастомные типы (Decimal, datetime)
-    use_enum_values=True,          # Сериализуем Enum как их значения
-    extra="ignore",                # Игнорируем лишние поля из внешних источников API
+    frozen=True,                 # ✅ Делаем модели иммутабельными и автоматически hashable
+    arbitrary_types_allowed=True,
+    use_enum_values=True,
+    extra="ignore",
 )
 
 # ─── Annotated types ──────────────────────────────────────────────────────────
@@ -52,15 +53,7 @@ class SupplierProductDTO(BaseModel):
     num_in_stock: NumInStock
     product_upc: Annotated[str | None, Field(description="UPC товара")] = None
     product_title: Annotated[str | None, Field(description="Название товара")] = None
-    # ✅ Исправлен синтаксис: добавлено пропущенное двоеточие после имени поля
-    extra_ Annotated[dict[str, Any] | None, Field(description="Дополнительные данные")] = None
-
-    def __hash__(self) -> int:
-        """
-        Хеш для использования в множествах/словарях.
-        Использует только неизменяемые ключевые поля.
-        """
-        return hash((self.supplier_sku, self.price, self.num_in_stock))
+    extra_data: Annotated[dict[str, Any] | None, Field(description="Дополнительные данные")] = None
 
 
 # ─── Sync Result DTO ──────────────────────────────────────────────────────────
@@ -117,7 +110,6 @@ class SyncStatsDTO(BaseModel):
         """
         if self.total == 0:
             return Decimal("0.0")
-        # ✅ Исправлено: корректная работа с Decimal без промежуточного str() * 100
         return round_decimal(
             Decimal(self.created + self.updated) * 100 / Decimal(self.total), 2
         )
