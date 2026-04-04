@@ -13,8 +13,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from httpx import Client
 from django.utils import timezone
+from httpx import Client
 
 from helpers.arithmetic import round_decimal
 from suppliers.models import Supplier, SupplierCatalogSync, SupplierStockHistory
