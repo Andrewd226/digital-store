@@ -4,12 +4,14 @@ suppliers/service/sync.py
 Сервисы синхронизации каталогов поставщиков.
 Реализует потоковую обработку, кеширование справочников и пакетную запись.
 """
+
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Iterator
+from typing import Any
 
 import httpx
 
@@ -19,10 +21,10 @@ from suppliers.service.base import BaseService
 from suppliers.service.dao import (
     CurrencyDAO,
     ProductDAO,
+    SupplierCatalogSyncDAO,
     SupplierDAO,
     SupplierStockHistoryDAO,
     SupplierStockRecordDAO,
-    SupplierCatalogSyncDAO,
 )
 from suppliers.service.dto import SupplierProductDTO, SyncResultDTO
 
@@ -37,7 +39,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         # ✅ Кеши для справочников (снижают N+1 до O(1) за уникальный код/UPC)
         self._currency_cache: dict[str, Any] = {}
         self._product_cache: dict[str | None, Any] = {}
-        
+
         # ✅ Буферы для пакетной записи
         self._buffer_records_to_update: list[Any] = []
         self._buffer_history_to_create: list[SupplierStockHistory] = []
@@ -47,10 +49,17 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         if self._buffer_records_to_update:
             SupplierStockRecordDAO.bulk_update_records(
                 self._buffer_records_to_update,
-                ["price", "supplier_sku", "num_in_stock", "currency", "is_active", "last_supplier_updated_at"],
+                [
+                    "price",
+                    "supplier_sku",
+                    "num_in_stock",
+                    "currency",
+                    "is_active",
+                    "last_supplier_updated_at",
+                ],
             )
             self._buffer_records_to_update.clear()
-            
+
         if self._buffer_history_to_create:
             SupplierStockHistoryDAO.bulk_create_history(self._buffer_history_to_create)
             self._buffer_history_to_create.clear()
@@ -121,7 +130,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                         change_type=self._determine_change_type(price_changed, stock_changed),
                     )
                 )
-                
+
                 result.updated = True
                 result.price_changed = price_changed
                 result.stock_changed = stock_changed
@@ -132,6 +141,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         else:
             # ✅ Создание новой записи (get_or_create безопасен для race-conditions)
             from django.utils import timezone
+
             created_record = SupplierStockRecord.objects.create(
                 supplier=self.supplier,
                 product=product,
@@ -167,14 +177,16 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         return result
 
     def _determine_change_type(self, pc: bool, sc: bool) -> str:
-        if pc and sc: return SupplierStockHistory.ChangeType.BOTH_CHANGED
-        if pc: return SupplierStockHistory.ChangeType.PRICE_CHANGED
+        if pc and sc:
+            return SupplierStockHistory.ChangeType.BOTH_CHANGED
+        if pc:
+            return SupplierStockHistory.ChangeType.PRICE_CHANGED
         return SupplierStockHistory.ChangeType.STOCK_CHANGED
 
     def sync(self, triggered_by: str = "celery") -> SupplierCatalogSync:
         # ✅ Пункт 3: Очистка зависших задач перед запуском новой
         SupplierCatalogSyncDAO.recover_stale_syncs()
-        
+
         try:
             self.start_sync(triggered_by=triggered_by)
             items_iter = self.fetch_data()
@@ -183,7 +195,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 try:
                     result = self.process_item(item)
                     self._update_stats(result)
-                    
+
                     if result.failed and result.error_message:
                         error_msg = f"{item.supplier_sku}: {result.error_message}"
                         self.errors.append(error_msg)
@@ -223,9 +235,9 @@ class APISupplierSyncService(BaseSupplierSyncService):
                 resp = client.get(current_url, headers=headers, params={"page": page, "limit": 200})
                 resp.raise_for_status()
                 data = resp.json()
-                
+
                 yield from self._parse_api_response(data)
-                
+
                 if not data.get("next"):
                     break
                 current_url = data.get("next")
@@ -242,5 +254,7 @@ class APISupplierSyncService(BaseSupplierSyncService):
                 product_title=item.get("title"),
                 config=item,
                 # Парсинг timestamp от поставщика (адаптируйте под формат вашего API)
-                source_updated_at=datetime.fromisoformat(item["updated_at"]) if item.get("updated_at") else None,
+                source_updated_at=datetime.fromisoformat(item["updated_at"])
+                if item.get("updated_at")
+                else None,
             )

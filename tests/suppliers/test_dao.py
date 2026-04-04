@@ -3,12 +3,11 @@ tests/suppliers/test_dao.py
 
 Тесты для слоя доступа к данным (DAO) модуля поставщиков.
 """
+
 from __future__ import annotations
 
-from decimal import Decimal
 import time
-
-import pytest
+from decimal import Decimal
 
 from suppliers.models import Supplier, SupplierStockRecord
 from suppliers.service.dao import (
@@ -17,7 +16,6 @@ from suppliers.service.dao import (
     SupplierStockHistoryDAO,
     SupplierStockRecordDAO,
 )
-
 
 # ─── SupplierDAO Tests ────────────────────────────────────────────────────────
 
@@ -179,14 +177,17 @@ class TestSupplierStockHistoryDAO:
 
     def test_get_by_stock_record(self, stock_record):
         SupplierStockHistoryDAO.create(
-            stock_record=stock_record, sync=None,
+            stock_record=stock_record,
+            sync=None,
             snapshot_supplier_name=stock_record.supplier.name,
             snapshot_product_title=stock_record.product.title,
             snapshot_product_upc=stock_record.product.upc or "",
             snapshot_supplier_sku=stock_record.supplier_sku,
             snapshot_currency_code=stock_record.currency.currency_code,
-            price_before=None, price_after=Decimal("999.99"),
-            num_in_stock_before=None, num_in_stock_after=100,
+            price_before=None,
+            price_after=Decimal("999.99"),
+            num_in_stock_before=None,
+            num_in_stock_after=100,
             change_type="created",
         )
         history = SupplierStockHistoryDAO.get_by_stock_record(stock_record)
@@ -194,14 +195,17 @@ class TestSupplierStockHistoryDAO:
 
     def test_get_by_supplier(self, supplier_api, stock_record):
         SupplierStockHistoryDAO.create(
-            stock_record=stock_record, sync=None,
+            stock_record=stock_record,
+            sync=None,
             snapshot_supplier_name=supplier_api.name,
             snapshot_product_title=stock_record.product.title,
             snapshot_product_upc=stock_record.product.upc or "",
             snapshot_supplier_sku=stock_record.supplier_sku,
             snapshot_currency_code=stock_record.currency.currency_code,
-            price_before=None, price_after=Decimal("999.99"),
-            num_in_stock_before=None, num_in_stock_after=100,
+            price_before=None,
+            price_after=Decimal("999.99"),
+            num_in_stock_before=None,
+            num_in_stock_after=100,
             change_type="created",
         )
         history = SupplierStockHistoryDAO.get_by_supplier(supplier_api)
@@ -215,9 +219,7 @@ class TestSupplierCatalogSyncDAO:
     """Тесты логов синхронизаций."""
 
     def test_create_running(self, supplier_api):
-        sync = SupplierCatalogSyncDAO.create_running(
-            supplier=supplier_api, triggered_by="pytest"
-        )
+        sync = SupplierCatalogSyncDAO.create_running(supplier=supplier_api, triggered_by="pytest")
         assert sync.supplier == supplier_api
         assert sync.status == "running"
         assert sync.triggered_by == "pytest"
@@ -225,9 +227,14 @@ class TestSupplierCatalogSyncDAO:
     def test_complete(self, supplier_api):
         sync = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
         completed = SupplierCatalogSyncDAO.complete(
-            sync_record=sync, status="success", total_items=10,
-            created_items=5, updated_items=3, skipped_items=1,
-            failed_items=1, error_log="",
+            sync_record=sync,
+            status="success",
+            total_items=10,
+            created_items=5,
+            updated_items=3,
+            skipped_items=1,
+            failed_items=1,
+            error_log="",
         )
         assert completed.status == "success"
         assert completed.total_items == 10

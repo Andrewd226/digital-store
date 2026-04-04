@@ -3,9 +3,8 @@ tests/core/test_dao.py
 
 Тесты для слоя доступа к данным (DAO) модуля core.
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from core.dao import CurrencyDAO
 

@@ -4,6 +4,7 @@ tests/suppliers/test_dto.py
 Тесты для DTO (Data Transfer Objects).
 Проверяют валидацию полей, расчётные свойства и граничные случаи.
 """
+
 from __future__ import annotations
 
 from decimal import Decimal

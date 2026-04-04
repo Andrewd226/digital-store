@@ -4,9 +4,11 @@ core/dao.py
 Data Access Object для справочника валют.
 Размещен в core, так как Currency — это базовая сущность системы.
 """
+
 from __future__ import annotations
 
 from django.db.models import QuerySet
+
 from core.models import Currency
 
 

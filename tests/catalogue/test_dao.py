@@ -3,9 +3,8 @@ tests/catalogue/test_dao.py
 
 Тесты для слоя доступа к данным (DAO) модуля catalogue.
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from catalogue.dao import ProductDAO
 

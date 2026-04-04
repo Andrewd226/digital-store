@@ -4,35 +4,31 @@ suppliers/service/dao.py
 Data Access Object (DAO) для работы с базой данных модуля поставщиков.
 Использует TYPE_CHECKING для безопасных аннотаций внешних моделей.
 """
+
 from __future__ import annotations
 
 import logging
 from datetime import timedelta
-from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from core.dao import CurrencyDAO
-from catalogue.dao import ProductDAO
-
 from suppliers.models import (
     Supplier,
     SupplierCatalogSync,
-    SupplierCredential,
     SupplierStockHistory,
     SupplierStockRecord,
 )
 
 if TYPE_CHECKING:
-    from core.models import Currency
     from catalogue.models import Product
 
 logger = logging.getLogger(__name__)
 
 
 # ─── Supplier DAO ─────────────────────────────────────────────────────────────
+
 
 class SupplierDAO:
     @staticmethod
@@ -48,6 +44,7 @@ class SupplierDAO:
 
 
 # ─── SupplierStockRecord DAO ──────────────────────────────────────────────────
+
 
 class SupplierStockRecordDAO:
     @staticmethod
@@ -79,6 +76,7 @@ class SupplierStockRecordDAO:
 
 # ─── SupplierStockHistory DAO ─────────────────────────────────────────────────
 
+
 class SupplierStockHistoryDAO:
     @staticmethod
     def bulk_create_history(history_records: list[SupplierStockHistory]) -> None:
@@ -88,6 +86,7 @@ class SupplierStockHistoryDAO:
 
 
 # ─── SupplierCatalogSync DAO ──────────────────────────────────────────────────
+
 
 class SupplierCatalogSyncDAO:
     @staticmethod
@@ -120,8 +119,14 @@ class SupplierCatalogSyncDAO:
         sync_record.error_log = error_log[:65535] if error_log else ""
         sync_record.save(
             update_fields=[
-                "status", "finished_at", "total_items", "created_items",
-                "updated_items", "skipped_items", "failed_items", "error_log",
+                "status",
+                "finished_at",
+                "total_items",
+                "created_items",
+                "updated_items",
+                "skipped_items",
+                "failed_items",
+                "error_log",
             ]
         )
         return sync_record

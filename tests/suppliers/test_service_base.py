@@ -4,15 +4,14 @@ tests/suppliers/test_service_base.py
 Тесты для базового класса сервиса синхронизации.
 Проверяют транзакционность, сбор статистики и обработку ошибок.
 """
-from __future__ import annotations
 
-from unittest.mock import Mock, patch
+from __future__ import annotations
 
 import pytest
 
-from suppliers.service.dto import SupplierProductDTO, SyncResultDTO, SyncStatsDTO
-from suppliers.service.base import BaseService
 from suppliers.models import Supplier, SupplierCatalogSync
+from suppliers.service.base import BaseService
+from suppliers.service.dto import SupplierProductDTO, SyncResultDTO, SyncStatsDTO
 
 
 class MockSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
@@ -21,7 +20,9 @@ class MockSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
     Переопределяет абстрактные методы, не затрагивая БД.
     """
 
-    def __init__(self, supplier: Supplier, fetch_data_result: list[SupplierProductDTO] | None = None):
+    def __init__(
+        self, supplier: Supplier, fetch_data_result: list[SupplierProductDTO] | None = None
+    ):
         super().__init__(supplier)
         self._fetch_data_result = fetch_data_result or []
         self._process_item_result = SyncResultDTO(supplier_sku="mock")
@@ -59,7 +60,7 @@ class TestBaseService:
         """Завершение с успешным статусом и корректной статистикой."""
         service = MockSyncService(supplier_api)
         service.start_sync()
-        
+
         service.stats.created = 5
         service.stats.updated = 3
         service.stats.skipped = 2
@@ -131,16 +132,16 @@ class TestBaseService:
     def test_update_stats(self, supplier_api):
         """_update_stats инкрементирует соответствующие счётчики."""
         service = MockSyncService(supplier_api)
-        
+
         service._update_stats(SyncResultDTO(supplier_sku="1", created=True))
         assert service.stats.created == 1
-        
+
         service._update_stats(SyncResultDTO(supplier_sku="2", updated=True))
         assert service.stats.updated == 1
-        
+
         service._update_stats(SyncResultDTO(supplier_sku="3", skipped=True))
         assert service.stats.skipped == 1
-        
+
         service._update_stats(SyncResultDTO(supplier_sku="4", failed=True))
         assert service.stats.failed == 1
 
@@ -149,7 +150,7 @@ class TestBaseService:
         service = MockSyncService(supplier_api)
         service.stats.created = 5
         service.stats.updated = 3
-        
+
         stats = service.get_stats()
         assert stats.total == 8
         assert stats.created == 5
@@ -171,5 +172,5 @@ class TestBaseService:
         service.stats.updated = 5
         service.stats.skipped = 3
         service.stats.failed = 2
-        
+
         assert service.stats.total == 20

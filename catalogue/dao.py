@@ -4,9 +4,11 @@ catalogue/dao.py
 Data Access Object для товаров каталога.
 Размещен в catalogue, так как Product — сущность этого домена.
 """
+
 from __future__ import annotations
 
 from django.db.models import QuerySet
+
 from catalogue.models import Product
 
 
