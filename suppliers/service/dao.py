@@ -5,6 +5,7 @@ Data Access Object (DAO) для работы с базой данных моду
 Использует TYPE_CHECKING для безопасных аннотаций внешних моделей.
 Все методы статические для упрощения тестирования.
 """
+
 from __future__ import annotations
 
 import logging
@@ -15,9 +16,6 @@ from typing import TYPE_CHECKING
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from core.dao import CurrencyDAO
-from catalogue.dao import ProductDAO
-
 from suppliers.models import (
     Supplier,
     SupplierCatalogSync,
@@ -27,13 +25,14 @@ from suppliers.models import (
 )
 
 if TYPE_CHECKING:
-    from core.models import Currency
     from catalogue.models import Product
+    from core.models import Currency
 
 logger = logging.getLogger(__name__)
 
 
 # ─── Supplier DAO ─────────────────────────────────────────────────────────────
+
 
 class SupplierDAO:
     """DAO для операций с поставщиками."""
@@ -78,6 +77,7 @@ class SupplierDAO:
 
 # ─── SupplierStockRecord DAO ──────────────────────────────────────────────────
 
+
 class SupplierStockRecordDAO:
     """DAO для операций с записями остатков поставщиков."""
 
@@ -118,8 +118,12 @@ class SupplierStockRecordDAO:
         stock_record.is_active = True
         stock_record.save(
             update_fields=[
-                "price", "supplier_sku", "num_in_stock",
-                "currency", "is_active", "updated_at",
+                "price",
+                "supplier_sku",
+                "num_in_stock",
+                "currency",
+                "is_active",
+                "updated_at",
             ]
         )
         return stock_record
@@ -157,6 +161,7 @@ class SupplierStockRecordDAO:
 
 
 # ─── SupplierStockHistory DAO ─────────────────────────────────────────────────
+
 
 class SupplierStockHistoryDAO:
     """DAO для операций с историей изменений остатков (append-only)."""
@@ -211,11 +216,14 @@ class SupplierStockHistoryDAO:
         supplier: Supplier, limit: int | None = None
     ) -> QuerySet[SupplierStockHistory]:
         """Возвращает общую историю изменений для всех товаров поставщика."""
-        qs = SupplierStockHistory.objects.filter(stock_record__supplier=supplier).order_by("-recorded_at")
+        qs = SupplierStockHistory.objects.filter(stock_record__supplier=supplier).order_by(
+            "-recorded_at"
+        )
         return qs[:limit] if limit else qs
 
 
 # ─── SupplierCatalogSync DAO ──────────────────────────────────────────────────
+
 
 class SupplierCatalogSyncDAO:
     """DAO для управления логами синхронизаций."""
@@ -252,14 +260,22 @@ class SupplierCatalogSyncDAO:
         sync_record.error_log = error_log[:65535] if error_log else ""
         sync_record.save(
             update_fields=[
-                "status", "finished_at", "total_items", "created_items",
-                "updated_items", "skipped_items", "failed_items", "error_log",
+                "status",
+                "finished_at",
+                "total_items",
+                "created_items",
+                "updated_items",
+                "skipped_items",
+                "failed_items",
+                "error_log",
             ]
         )
         return sync_record
 
     @staticmethod
-    def get_by_supplier(supplier: Supplier, limit: int | None = None) -> QuerySet[SupplierCatalogSync]:
+    def get_by_supplier(
+        supplier: Supplier, limit: int | None = None
+    ) -> QuerySet[SupplierCatalogSync]:
         """Возвращает историю запусков синхронизации для поставщика."""
         qs = SupplierCatalogSync.objects.filter(supplier=supplier).order_by("-started_at")
         return qs[:limit] if limit else qs

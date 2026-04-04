@@ -4,18 +4,20 @@ suppliers/service/sync.py
 Сервисы синхронизации каталогов поставщиков.
 Реализует потоковую обработку, кеширование справочников и пакетную запись.
 """
+
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from decimal import Decimal
-from typing import Any, Iterator
+from typing import Any
 
 from django.utils import timezone
 from httpx import Client
 
-from helpers.arithmetic import round_decimal
 from catalogue.dao import ProductDAO
 from core.dao import CurrencyDAO
+from helpers.arithmetic import round_decimal
 from suppliers.models import (
     Supplier,
     SupplierCatalogSync,
@@ -66,8 +68,14 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 self._buffer_records_to_update,
                 # updated_at намеренно исключён: auto_now=True не срабатывает
                 # при bulk_update, поле обновляется только через .save()
-                ["price", "supplier_sku", "num_in_stock", "currency", "is_active",
-                 "last_supplier_updated_at"],
+                [
+                    "price",
+                    "supplier_sku",
+                    "num_in_stock",
+                    "currency",
+                    "is_active",
+                    "last_supplier_updated_at",
+                ],
             )
             self._buffer_records_to_update.clear()
 
