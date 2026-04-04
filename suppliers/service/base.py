@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from django.db import transaction
 
@@ -24,7 +24,7 @@ TDTO = TypeVar("TDTO")
 TResult = TypeVar("TResult")
 
 
-class BaseService(ABC, Generic[TDTO, TResult]):
+class BaseService[TDTO, TResult](ABC):
     def __init__(self, supplier: Supplier):
         self.supplier = supplier
         self.sync_record: SupplierCatalogSync | None = None
