@@ -2,8 +2,11 @@
 suppliers/models.py
 
 Модуль поставщиков: учет цен, остатков и истории изменений.
-- Все строковые поля: TextField.
-- Все денежные поля: DecimalField(max_digits=50, decimal_places=25).
+Правила:
+- Все строковые поля → TextField
+- Все денежные поля → DecimalField(max_digits=50, decimal_places=25)
+- Чувствительные данные → EncryptedTextField (django-fernet-encrypted-fields)
+- Защита от устаревших данных и Celery-интеграция на уровне модели
 """
 from __future__ import annotations
 
@@ -12,10 +15,13 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from fernet_fields import EncryptedTextField
+
+from helpers.arithmetic import round_decimal
 
 
 class Supplier(models.Model):
-    """Модель поставщика."""
+    """Модель поставщика. Хранит настройки синхронизации и метод подключения."""
 
     class SyncMethod(models.TextChoices):
         API = "api", _("REST API")
@@ -23,7 +29,7 @@ class Supplier(models.Model):
         FTP = "ftp", _("FTP/SFTP")
 
     name = models.TextField(_("Название"))
-    code = models.TextField(_("Код"), unique=True, db_index=True, help_text=_("Уникальный идентификатор"))
+    code = models.TextField(_("Код"), unique=True, db_index=True, help_text=_("Уникальный идентификатор (slug)"))
     sync_method = models.TextField(_("Метод синхронизации"), choices=SyncMethod.choices, default=SyncMethod.MANUAL)
     api_url = models.TextField(_("URL API"), blank=True, default="")
     api_extra_config = models.JSONField(_("Доп. конфигурация API"), default=dict, blank=True)
@@ -36,7 +42,7 @@ class Supplier(models.Model):
         verbose_name=_("Валюта по умолчанию"),
     )
     
-    priority = models.PositiveIntegerField(_("Приоритет"), default=100)
+    priority = models.PositiveIntegerField(_("Приоритет"), default=100, help_text=_("Меньше число — выше приоритет"))
     supplier_is_active = models.BooleanField(_("Активен"), default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -53,12 +59,15 @@ class Supplier(models.Model):
 
 
 class SupplierCredential(models.Model):
-    """Учетные данные для доступа к API/FTP."""
+    """
+    Учетные данные для доступа к API/FTP поставщика.
+    🔒 Чувствительные поля зашифрованы на уровне БД.
+    """
     supplier = models.OneToOneField(
         Supplier, on_delete=models.CASCADE, related_name="credential", verbose_name=_("Поставщик")
     )
-    api_key = models.TextField(_("API Key"), blank=True)
-    api_secret = models.TextField(_("API Secret"), blank=True)
+    api_key = EncryptedTextField(_("API Key"), blank=True)
+    api_secret = EncryptedTextField(_("API Secret"), blank=True)
     extra = models.JSONField(_("Доп. данные"), default=dict, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -83,12 +92,11 @@ class SupplierStockRecord(models.Model):
 
     supplier_sku = models.TextField(_("Артикул поставщика"), db_index=True)
     
-    # ✅ Высокая точность цены (50 знаков всего, 25 после запятой)
     price = models.DecimalField(
         _("Цена"),
         max_digits=50,
         decimal_places=25,
-        default=Decimal("0.0000000000000000000000000"),
+        default=Decimal("0"),
         validators=[MinValueValidator(0)],
     )
     
@@ -97,15 +105,15 @@ class SupplierStockRecord(models.Model):
     )
 
     num_in_stock = models.PositiveIntegerField(_("Количество на складе"), default=0)
-    num_allocated = models.PositiveIntegerField(_("Зарезервировано"), default=0)
+    num_allocated = models.PositiveIntegerField(_("Зарезервировано"), default=0, help_text=_("Количество в активных заказах"))
     is_active = models.BooleanField(_("Активен"), default=True)
 
-    # ✅ Защита от устаревших данных
+    # Версионирование данных для защиты от перезаписи новых значений старыми
     last_supplier_updated_at = models.DateTimeField(
         _("Время обновления у поставщика"),
         null=True,
         blank=True,
-        help_text=_("Timestamp для предотвращения перезаписи новых данных старыми"),
+        help_text=_("Если incoming.updated_at <= record.updated_at, обновление пропускается."),
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -127,15 +135,17 @@ class SupplierStockRecord(models.Model):
 
     @property
     def num_available(self) -> int:
+        """Доступное количество (на складе минус зарезервированное)."""
         return max(0, self.num_in_stock - self.num_allocated)
 
     @property
     def is_available(self) -> bool:
+        """Товар доступен для заказа."""
         return self.is_active and self.num_available > 0
 
 
 class SupplierStockHistory(models.Model):
-    """Append-only история изменений цен и остатков."""
+    """Append-only история изменений цен и остатков. Не подлежит редактированию."""
     class ChangeType(models.TextChoices):
         CREATED = "created", _("Создано")
         PRICE_CHANGED = "price", _("Изменение цены")
@@ -150,13 +160,14 @@ class SupplierStockHistory(models.Model):
         "suppliers.SupplierCatalogSync", on_delete=models.SET_NULL, null=True, blank=True, related_name="history_records", verbose_name=_("Синхронизация")
     )
 
+    # Все снимки данных → TextField (денормализация для аудита)
     snapshot_supplier_name = models.TextField(_("Название поставщика"))
     snapshot_product_title = models.TextField(_("Название товара"))
     snapshot_product_upc = models.TextField(_("UPC"), blank=True, default="")
     snapshot_supplier_sku = models.TextField(_("Артикул поставщика"))
     snapshot_currency_code = models.TextField(_("Код валюты"))
 
-    # ✅ Высокая точность цены в истории
+    #  Точность цены в истории совпадает с основной таблицей
     price_before = models.DecimalField(_("Цена до"), max_digits=50, decimal_places=25, null=True, blank=True)
     price_after = models.DecimalField(_("Цена после"), max_digits=50, decimal_places=25)
     
@@ -180,14 +191,16 @@ class SupplierStockHistory(models.Model):
 
     @property
     def price_delta(self) -> Decimal:
+        """Абсолютное изменение цены."""
         if self.price_before is None:
             return self.price_after
         return self.price_after - self.price_before
 
     @property
     def price_delta_pct(self) -> Decimal:
+        """Процентное изменение цены (финансовое округление через quantize)."""
         if self.price_before and self.price_before > 0:
-            return round((self.price_delta / self.price_before) * 100, 2)
+            return round_decimal(self.price_delta / self.price_before * 100, 2)
         return Decimal("0.00")
 
 
@@ -205,6 +218,9 @@ class SupplierCatalogSync(models.Model):
     )
     status = models.TextField(_("Статус"), choices=Status.choices, default=Status.PENDING)
     triggered_by = models.TextField(_("Запущено"), default="celery")
+    
+    # Поле для связки с асинхронными задачами Celery
+    task_id = models.TextField(_("Celery Task ID"), blank=True, default="", help_text=_("ID асинхронной задачи"))
 
     started_at = models.DateTimeField(_("Начало"), auto_now_add=True)
     finished_at = models.DateTimeField(_("Окончание"), null=True, blank=True)
@@ -230,6 +246,7 @@ class SupplierCatalogSync(models.Model):
 
     @property
     def duration_seconds(self) -> int | None:
+        """Длительность синхронизации в секундах."""
         if self.finished_at and self.started_at:
             return int((self.finished_at - self.started_at).total_seconds())
         return None
