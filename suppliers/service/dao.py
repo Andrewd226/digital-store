@@ -2,14 +2,13 @@
 suppliers/service/dao.py
 
 Data Access Object (DAO) для работы с базой данных модуля поставщиков.
-Использует TYPE_CHECKING для безопасных аннотаций внешних моделей.
-Все методы статические для упрощения тестирования.
+Содержит только методы, используемые текущей бизнес-логикой сервиса.
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -46,25 +45,9 @@ class SupplierDAO:
             return None
 
     @staticmethod
-    def get_by_code(code: str) -> Supplier | None:
-        """Получает поставщика по уникальному коду (slug)."""
-        try:
-            return Supplier.objects.get(code=code)
-        except Supplier.DoesNotExist:
-            return None
-
-    @staticmethod
     def get_active_suppliers() -> QuerySet[Supplier]:
         """Возвращает всех активных поставщиков."""
         return Supplier.objects.filter(supplier_is_active=True)
-
-    @staticmethod
-    def get_active_by_sync_method(sync_method: str) -> QuerySet[Supplier]:
-        """Возвращает активных поставщиков с конкретным методом синхронизации."""
-        return Supplier.objects.filter(
-            supplier_is_active=True,
-            sync_method=sync_method,
-        )
 
     @staticmethod
     def get_credential(supplier: Supplier) -> SupplierCredential | None:
@@ -82,7 +65,9 @@ class SupplierStockRecordDAO:
     """DAO для операций с записями остатков поставщиков."""
 
     @staticmethod
-    def get_by_supplier_product(supplier: Supplier, product: Product) -> SupplierStockRecord | None:
+    def get_by_supplier_product(
+        supplier: Supplier, product: Product
+    ) -> SupplierStockRecord | None:
         """Получает запись остатка по связке поставщик-товар."""
         try:
             return SupplierStockRecord.objects.select_related("currency").get(
@@ -92,54 +77,49 @@ class SupplierStockRecordDAO:
             return None
 
     @staticmethod
-    def get_or_create(
-        supplier: Supplier, product: Product, defaults: dict
-    ) -> tuple[SupplierStockRecord, bool]:
-        """Находит существующую запись или создаёт новую."""
-        return SupplierStockRecord.objects.get_or_create(
+    def build(
+        supplier: Supplier,
+        product: Product,
+        supplier_sku: str,
+        price: Decimal,
+        currency: Currency,
+        num_in_stock: int,
+        last_supplier_updated_at: datetime | None = None,
+    ) -> SupplierStockRecord:
+        """
+        Создаёт несохранённый экземпляр SupplierStockRecord для последующего bulk_create.
+        created_at и updated_at не передаются — auto_now_add/auto_now игнорируют явные
+        значения при bulk_create.
+        """
+        return SupplierStockRecord(
             supplier=supplier,
             product=product,
-            defaults=defaults,
+            supplier_sku=supplier_sku,
+            price=price,
+            currency=currency,
+            num_in_stock=num_in_stock,
+            is_active=True,
+            last_supplier_updated_at=last_supplier_updated_at or timezone.now(),
         )
 
     @staticmethod
-    def update(
-        stock_record: SupplierStockRecord,
-        price: Decimal,
-        supplier_sku: str,
-        num_in_stock: int,
-        currency: Currency,
-    ) -> SupplierStockRecord:
-        """Обновляет параметры поставки. Активирует запись, если была деактивирована."""
-        stock_record.price = price
-        stock_record.supplier_sku = supplier_sku
-        stock_record.num_in_stock = num_in_stock
-        stock_record.currency = currency
-        stock_record.is_active = True
-        stock_record.save(
-            update_fields=[
-                "price",
-                "supplier_sku",
-                "num_in_stock",
-                "currency",
-                "is_active",
-                "updated_at",
-            ]
-        )
-        return stock_record
+    def bulk_create_records(records: list[SupplierStockRecord]) -> None:
+        """
+        Пакетное создание новых записей остатков.
+        После вызова Django (PostgreSQL RETURNING id) проставляет pk в каждый объект.
+        """
+        if records:
+            SupplierStockRecord.objects.bulk_create(records)
 
     @staticmethod
-    def get_active_by_supplier(supplier: Supplier) -> QuerySet[SupplierStockRecord]:
-        """Возвращает активные записи остатков конкретного поставщика."""
-        return SupplierStockRecord.objects.filter(supplier=supplier, is_active=True)
-
-    @staticmethod
-    def get_by_supplier_sku(supplier: Supplier, supplier_sku: str) -> SupplierStockRecord | None:
-        """Получает запись по внутреннему артикулу поставщика."""
-        try:
-            return SupplierStockRecord.objects.get(supplier=supplier, supplier_sku=supplier_sku)
-        except SupplierStockRecord.DoesNotExist:
-            return None
+    def bulk_update_records(records: list[SupplierStockRecord], fields: list[str]) -> None:
+        """
+        Пакетное обновление существующих записей.
+        updated_at намеренно исключается из fields — auto_now=True не срабатывает
+        при bulk_update; поле обновляется только через .save().
+        """
+        if records:
+            SupplierStockRecord.objects.bulk_update(records, fields)
 
     @staticmethod
     def deactivate_missing(supplier: Supplier, active_skus: list[str]) -> int:
@@ -153,12 +133,6 @@ class SupplierStockRecordDAO:
             logger.info("Деактивировано %d записей остатков для %s", deactivated, supplier.name)
         return deactivated
 
-    @staticmethod
-    def bulk_update_records(records: list[SupplierStockRecord], fields: list[str]) -> None:
-        """Пакетное обновление существующих записей."""
-        if records:
-            SupplierStockRecord.objects.bulk_update(records, fields)
-
 
 # ─── SupplierStockHistory DAO ─────────────────────────────────────────────────
 
@@ -167,7 +141,7 @@ class SupplierStockHistoryDAO:
     """DAO для операций с историей изменений остатков (append-only)."""
 
     @staticmethod
-    def create(
+    def build(
         stock_record: SupplierStockRecord,
         sync: SupplierCatalogSync | None,
         snapshot_supplier_name: str,
@@ -181,8 +155,8 @@ class SupplierStockHistoryDAO:
         num_in_stock_after: int,
         change_type: str,
     ) -> SupplierStockHistory:
-        """Создаёт снимок изменения в истории."""
-        return SupplierStockHistory.objects.create(
+        """Создаёт несохранённый экземпляр SupplierStockHistory для последующего bulk_create."""
+        return SupplierStockHistory(
             stock_record=stock_record,
             sync=sync,
             snapshot_supplier_name=snapshot_supplier_name,
@@ -203,24 +177,6 @@ class SupplierStockHistoryDAO:
         if history_records:
             SupplierStockHistory.objects.bulk_create(history_records)
 
-    @staticmethod
-    def get_by_stock_record(
-        stock_record: SupplierStockRecord, limit: int | None = None
-    ) -> QuerySet[SupplierStockHistory]:
-        """Возвращает историю изменений конкретной записи (от новых к старым)."""
-        qs = SupplierStockHistory.objects.filter(stock_record=stock_record).order_by("-recorded_at")
-        return qs[:limit] if limit else qs
-
-    @staticmethod
-    def get_by_supplier(
-        supplier: Supplier, limit: int | None = None
-    ) -> QuerySet[SupplierStockHistory]:
-        """Возвращает общую историю изменений для всех товаров поставщика."""
-        qs = SupplierStockHistory.objects.filter(stock_record__supplier=supplier).order_by(
-            "-recorded_at"
-        )
-        return qs[:limit] if limit else qs
-
 
 # ─── SupplierCatalogSync DAO ──────────────────────────────────────────────────
 
@@ -235,7 +191,8 @@ class SupplierCatalogSyncDAO:
             supplier=supplier,
             status=SupplierCatalogSync.Status.RUNNING,
             triggered_by=triggered_by,
-            # started_at не передаём — поле auto_now_add=True, явное значение игнорируется Django
+            # started_at не передаём — поле auto_now_add=True,
+            # явное значение игнорируется Django
         )
 
     @staticmethod
@@ -271,19 +228,6 @@ class SupplierCatalogSyncDAO:
             ]
         )
         return sync_record
-
-    @staticmethod
-    def get_by_supplier(
-        supplier: Supplier, limit: int | None = None
-    ) -> QuerySet[SupplierCatalogSync]:
-        """Возвращает историю запусков синхронизации для поставщика."""
-        qs = SupplierCatalogSync.objects.filter(supplier=supplier).order_by("-started_at")
-        return qs[:limit] if limit else qs
-
-    @staticmethod
-    def get_last_sync(supplier: Supplier) -> SupplierCatalogSync | None:
-        """Возвращает самую последнюю запись синхронизации."""
-        return SupplierCatalogSyncDAO.get_by_supplier(supplier, limit=1).first()
 
     @staticmethod
     def recover_stale_syncs(timeout_hours: int = 2) -> int:

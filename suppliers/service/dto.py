@@ -56,7 +56,6 @@ class SupplierProductDTO(BaseModel):
     product_upc: Annotated[str | None, Field(description="UPC товара")] = None
     product_title: Annotated[str | None, Field(description="Название товара")] = None
     config: Annotated[dict[str, Any] | None, Field(description="Доп. данные")] = None
-    # ✅ Пункт 2: Время обновления в источнике для защиты от перезаписи новых данных старыми
     source_updated_at: Annotated[
         datetime | None, Field(description="Timestamp обновления у поставщика")
     ] = None
@@ -82,7 +81,7 @@ class SyncResultDTO(BaseModel):
     price_after: Price | None = None
     stock_before: NumInStock | None = None
     stock_after: NumInStock | None = None
-    skipped_reason: str | None = None  # ✅ Причина пропуска (например, "stale_data")
+    skipped_reason: str | None = None
 
 
 # ─── Sync Stats DTO ───────────────────────────────────────────────────────────
@@ -115,18 +114,3 @@ class SyncStatsDTO(BaseModel):
     @property
     def has_changes(self) -> bool:
         return self.created > 0 or self.updated > 0
-
-
-# ─── Sync Config DTO ──────────────────────────────────────────────────────────
-
-
-class SyncConfigDTO(BaseModel):
-    """Конфигурация запуска синхронизации. Иммутабельна."""
-
-    model_config = ImmutableDTOConfig
-
-    triggered_by: str = "celery"
-    batch_size: BatchSize = 500  # ✅ Уменьшен для регулярного флеша буферов
-    timeout_seconds: TimeoutSeconds = 300
-    create_missing_products: bool = False
-    deactivate_missing_products: bool = False

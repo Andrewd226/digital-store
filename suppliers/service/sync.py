@@ -3,6 +3,7 @@ suppliers/service/sync.py
 
 Сервисы синхронизации каталогов поставщиков.
 Реализует потоковую обработку, кеширование справочников и пакетную запись.
+Бизнес-логика работает только через слой DAO и DTO — без прямых обращений к моделям.
 """
 
 from __future__ import annotations
@@ -22,7 +23,6 @@ from suppliers.models import (
     Supplier,
     SupplierCatalogSync,
     SupplierStockHistory,
-    SupplierStockRecord,
 )
 from suppliers.service.base import BaseService
 from suppliers.service.dao import (
@@ -52,22 +52,21 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         Пакетная запись накопленных изменений в БД.
 
         ВАЖНО: порядок операций фиксирован и менять его нельзя:
-          1. bulk_create записей остатков — Django (PostgreSQL RETURNING id)
-             проставляет pk в Python-объектах после вызова.
-          2. bulk_update записей остатков.
-          3. bulk_create истории — SupplierStockHistory.stock_record ссылается
-             на объекты из шагов 1 и 2; к этому моменту их pk уже заполнены.
+          1. bulk_create_records — Django (PostgreSQL RETURNING id) проставляет pk
+             в Python-объектах после вызова.
+          2. bulk_update_records.
+          3. bulk_create_history — FK stock_record ссылается на объекты из шагов
+             1 и 2; к этому моменту их pk уже заполнены.
         Если переставить шаг 3 раньше шага 1 — получим IntegrityError (FK = None).
         """
         if self._buffer_records_to_create:
-            SupplierStockRecord.objects.bulk_create(self._buffer_records_to_create)
+            SupplierStockRecordDAO.bulk_create_records(self._buffer_records_to_create)
             self._buffer_records_to_create.clear()
 
         if self._buffer_records_to_update:
             SupplierStockRecordDAO.bulk_update_records(
                 self._buffer_records_to_update,
-                # updated_at намеренно исключён: auto_now=True не срабатывает
-                # при bulk_update, поле обновляется только через .save()
+                # updated_at намеренно исключён: auto_now=True не срабатывает при bulk_update
                 [
                     "price",
                     "supplier_sku",
@@ -136,7 +135,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 self._buffer_records_to_update.append(stock_record)
 
                 self._buffer_history_to_create.append(
-                    SupplierStockHistory(
+                    SupplierStockHistoryDAO.build(
                         stock_record=stock_record,
                         sync=self.sync_record,
                         snapshot_supplier_name=self.supplier.name,
@@ -160,22 +159,19 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
             else:
                 result.skipped = True
         else:
-            # created_at и updated_at не передаём в конструктор:
-            # auto_now_add/auto_now игнорируют явные значения при bulk_create
-            new_record = SupplierStockRecord(
+            new_record = SupplierStockRecordDAO.build(
                 supplier=self.supplier,
                 product=product,
                 supplier_sku=item.supplier_sku,
                 price=price,
                 currency=currency,
                 num_in_stock=item.num_in_stock,
-                is_active=True,
-                last_supplier_updated_at=item.source_updated_at or timezone.now(),
+                last_supplier_updated_at=item.source_updated_at,
             )
             self._buffer_records_to_create.append(new_record)
 
             self._buffer_history_to_create.append(
-                SupplierStockHistory(
+                SupplierStockHistoryDAO.build(
                     stock_record=new_record,
                     sync=self.sync_record,
                     snapshot_supplier_name=self.supplier.name,
