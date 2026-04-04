@@ -15,7 +15,7 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from fernet_fields import EncryptedTextField
+from encrypted_fields.fields import EncryptedTextField
 
 from helpers.arithmetic import round_decimal
 

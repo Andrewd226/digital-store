@@ -3,7 +3,7 @@ currencies/models.py
 """
 
 from django.db import models
-from encrypted_fields.fields import EncryptedCharField
+from encrypted_fields.fields import EncryptedTextField
 
 from helpers.arithmetic import round_decimal
 
@@ -84,8 +84,8 @@ class CurrencyRateSourceCredential(models.Model):
         related_name="credential",
         verbose_name="Источник",
     )
-    api_key = EncryptedCharField(max_length=512, blank=True, verbose_name="API-ключ")
-    api_secret = EncryptedCharField(max_length=512, blank=True, verbose_name="API-секрет")
+    api_key = EncryptedTextField(_("API Key"), blank=True)
+    api_secret = EncryptedTextField(_("API Secret"), blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
