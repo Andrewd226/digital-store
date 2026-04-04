@@ -231,8 +231,8 @@ class APISupplierSyncService(BaseSupplierSyncService):
                 current_url = data.get("next")
                 page += 1
 
-    def _parse_api_response(self,  dict[str, Any]) -> Iterator[SupplierProductDTO]:
-        for item in data.get("items", []):
+    def _parse_api_response(self, raw: dict[str, Any]) -> Iterator[SupplierProductDTO]:
+        for item in raw.get("items", []):
             yield SupplierProductDTO(
                 supplier_sku=str(item.get("sku")),
                 price=Decimal(str(item.get("price", 0))),
@@ -241,6 +241,6 @@ class APISupplierSyncService(BaseSupplierSyncService):
                 product_upc=item.get("upc"),
                 product_title=item.get("title"),
                 config=item,
-                # ✅ Парсинг timestamp от поставщика (адаптируйте под формат вашего API)
+                # Парсинг timestamp от поставщика (адаптируйте под формат вашего API)
                 source_updated_at=datetime.fromisoformat(item["updated_at"]) if item.get("updated_at") else None,
             )
