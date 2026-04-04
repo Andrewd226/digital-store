@@ -65,9 +65,7 @@ class SupplierStockRecordDAO:
     """DAO для операций с записями остатков поставщиков."""
 
     @staticmethod
-    def get_by_supplier_product(
-        supplier: Supplier, product: Product
-    ) -> SupplierStockRecord | None:
+    def get_by_supplier_product(supplier: Supplier, product: Product) -> SupplierStockRecord | None:
         """Получает запись остатка по связке поставщик-товар."""
         try:
             return SupplierStockRecord.objects.select_related("currency").get(
