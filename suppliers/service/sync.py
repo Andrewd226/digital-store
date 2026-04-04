@@ -46,15 +46,28 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         self._buffer_history_to_create: list[SupplierStockHistory] = []
 
     def _flush_buffers(self) -> None:
-        """Пакетная запись накопленных изменений в БД."""
+        """
+        Пакетная запись накопленных изменений в БД.
+
+        ВАЖНО: порядок операций фиксирован и менять его нельзя:
+          1. bulk_create записей остатков — Django (PostgreSQL RETURNING id)
+             проставляет pk в Python-объектах после вызова.
+          2. bulk_update записей остатков.
+          3. bulk_create истории — SupplierStockHistory.stock_record ссылается
+             на объекты из шагов 1 и 2; к этому моменту их pk уже заполнены.
+        Если переставить шаг 3 раньше шага 1 — получим IntegrityError (FK = None).
+        """
         if self._buffer_records_to_create:
             SupplierStockRecord.objects.bulk_create(self._buffer_records_to_create)
             self._buffer_records_to_create.clear()
-            
+
         if self._buffer_records_to_update:
             SupplierStockRecordDAO.bulk_update_records(
                 self._buffer_records_to_update,
-                ["price", "supplier_sku", "num_in_stock", "currency", "is_active", "last_supplier_updated_at"],
+                # updated_at намеренно исключён: auto_now=True не срабатывает
+                # при bulk_update, поле обновляется только через .save()
+                ["price", "supplier_sku", "num_in_stock", "currency", "is_active",
+                 "last_supplier_updated_at"],
             )
             self._buffer_records_to_update.clear()
 
@@ -90,7 +103,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         price = round_decimal(item.price, 25)
         stock_record = SupplierStockRecordDAO.get_by_supplier_product(self.supplier, product)
 
-        # Пункт 2: Защита от перезаписи новых данных старыми
+        # Защита от перезаписи новых данных старыми
         if stock_record and stock_record.last_supplier_updated_at and item.source_updated_at:
             if item.source_updated_at <= stock_record.last_supplier_updated_at:
                 result.skipped = True
@@ -98,15 +111,14 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 return result
 
         if stock_record:
-            # Пункт 3: Сохраняем СТАРЫЕ значения ДО мутации объекта!
+            # Сохраняем СТАРЫЕ значения ДО мутации объекта
             price_before = stock_record.price
             stock_before = stock_record.num_in_stock
-            
+
             price_changed = stock_record.price != price
             stock_changed = stock_record.num_in_stock != item.num_in_stock
 
             if price_changed or stock_changed:
-                # Обновляем объект в памяти
                 stock_record.price = price
                 stock_record.supplier_sku = item.supplier_sku
                 stock_record.num_in_stock = item.num_in_stock
@@ -115,7 +127,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 stock_record.last_supplier_updated_at = item.source_updated_at or timezone.now()
                 self._buffer_records_to_update.append(stock_record)
 
-                # ✅ Добавляем историю с корректными price_before/after
                 self._buffer_history_to_create.append(
                     SupplierStockHistory(
                         stock_record=stock_record,
@@ -125,8 +136,8 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                         snapshot_product_upc=product.upc or "",
                         snapshot_supplier_sku=item.supplier_sku,
                         snapshot_currency_code=currency.currency_code,
-                        price_before=price_before,  # ✅ Старая цена (сохранена до мутации)
-                        price_after=price,          # ✅ Новая цена
+                        price_before=price_before,
+                        price_after=price,
                         num_in_stock_before=stock_before,
                         num_in_stock_after=item.num_in_stock,
                         change_type=self._determine_change_type(price_changed, stock_changed),
@@ -141,8 +152,8 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
             else:
                 result.skipped = True
         else:
-            # Создание новой записи
-            now = timezone.now()
+            # created_at и updated_at не передаём в конструктор:
+            # auto_now_add/auto_now игнорируют явные значения при bulk_create
             new_record = SupplierStockRecord(
                 supplier=self.supplier,
                 product=product,
@@ -151,12 +162,10 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                 currency=currency,
                 num_in_stock=item.num_in_stock,
                 is_active=True,
-                last_supplier_updated_at=item.source_updated_at or now,
-                created_at=now,
-                updated_at=now,
+                last_supplier_updated_at=item.source_updated_at or timezone.now(),
             )
             self._buffer_records_to_create.append(new_record)
-            
+
             self._buffer_history_to_create.append(
                 SupplierStockHistory(
                     stock_record=new_record,
@@ -175,7 +184,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
             )
             result.created = True
 
-        # Периодический сброс буферов
         if len(self._buffer_history_to_create) >= 500:
             self._flush_buffers()
 
@@ -189,7 +197,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         return SupplierStockHistory.ChangeType.STOCK_CHANGED
 
     def sync(self, triggered_by: str = "celery") -> SupplierCatalogSync:
-        # ✅ Пункт 3: Очистка зависших задач перед запуском новой
         SupplierCatalogSyncDAO.recover_stale_syncs()
 
         try:
@@ -211,7 +218,6 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
                     self.errors.append(error_msg)
                     logger.error("Исключение при обработке элемента: %s", error_msg)
 
-            # Финальный сброс остатков в буфере
             self._flush_buffers()
             self.complete_sync(error_log="\n".join(self.errors[:1000]))
         except Exception as e:
@@ -240,9 +246,9 @@ class APISupplierSyncService(BaseSupplierSyncService):
                 resp = client.get(current_url, headers=headers, params={"page": page, "limit": 200})
                 resp.raise_for_status()
                 data = resp.json()
-                
+
                 yield from self._parse_api_response(data)
-                
+
                 if not data.get("next"):
                     break
                 current_url = data.get("next")
@@ -264,6 +270,7 @@ class APISupplierSyncService(BaseSupplierSyncService):
 
 class ManualSupplierSyncService(BaseSupplierSyncService):
     """Сервис ручной синхронизации."""
+
     def __init__(self, supplier: Supplier, products: list[SupplierProductDTO]):
         super().__init__(supplier)
         self._products = products

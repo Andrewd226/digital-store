@@ -227,7 +227,7 @@ class SupplierCatalogSyncDAO:
             supplier=supplier,
             status=SupplierCatalogSync.Status.RUNNING,
             triggered_by=triggered_by,
-            started_at=timezone.now(),
+            # started_at не передаём — поле auto_now_add=True, явное значение игнорируется Django
         )
 
     @staticmethod
