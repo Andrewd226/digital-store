@@ -217,7 +217,7 @@ class TestSupplierStockHistoryModel:
 
     def test_protect_on_delete(self, stock_record):
         """PROTECT предотвращает удаление связанной записи."""
-        history = SupplierStockHistory.objects.create(
+        SupplierStockHistory.objects.create(
             stock_record=stock_record,
             snapshot_supplier_name=stock_record.supplier.name,
             snapshot_product_title=stock_record.product.title,
