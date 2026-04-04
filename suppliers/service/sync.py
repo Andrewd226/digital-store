@@ -17,6 +17,8 @@ from django.utils import timezone
 from httpx import Client
 
 from helpers.arithmetic import round_decimal
+from catalogue.dao import ProductDAO
+from core.dao import CurrencyDAO
 from suppliers.models import (
     Supplier,
     SupplierCatalogSync,
@@ -25,8 +27,6 @@ from suppliers.models import (
 )
 from suppliers.service.base import BaseService
 from suppliers.service.dao import (
-    CurrencyDAO,
-    ProductDAO,
     SupplierCatalogSyncDAO,
     SupplierDAO,
     SupplierStockHistoryDAO,
