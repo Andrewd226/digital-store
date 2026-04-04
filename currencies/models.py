@@ -3,6 +3,7 @@ currencies/models.py
 """
 
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from encrypted_fields.fields import EncryptedTextField
 
 from helpers.arithmetic import round_decimal
