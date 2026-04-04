@@ -59,7 +59,7 @@ class TestBaseSupplierSyncService:
         rub,
     ):
         """Обработка товара обновляет существующую запись."""
-        stock_record = SupplierStockRecord.objects.create(
+        SupplierStockRecord.objects.create(
             supplier=supplier_api,
             product=product_test,
             supplier_sku="ART-OLD",

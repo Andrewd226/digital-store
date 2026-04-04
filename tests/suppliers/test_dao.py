@@ -247,7 +247,7 @@ class TestSupplierCatalogSyncDAO:
         assert syncs.count() == 2
 
     def test_get_last_sync(self, supplier_api):
-        sync1 = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
+        SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
         time.sleep(0.01)
         sync2 = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
         last = SupplierCatalogSyncDAO.get_last_sync(supplier_api)
