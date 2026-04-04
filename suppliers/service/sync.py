@@ -13,7 +13,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-import httpx
+from httpx import Client
+from django.utils import timezone
 
 from helpers.arithmetic import round_decimal
 from suppliers.models import Supplier, SupplierCatalogSync, SupplierStockHistory
@@ -92,7 +93,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
         price = round_decimal(item.price, 25)
         stock_record = SupplierStockRecordDAO.get_by_supplier_product(self.supplier, product)
 
-        # ✅ Пункт 2: Защита от перезаписи новых данных старыми
+        # Пункт 2: Защита от перезаписи новых данных старыми
         if stock_record and stock_record.last_supplier_updated_at and item.source_updated_at:
             if item.source_updated_at <= stock_record.last_supplier_updated_at:
                 result.skipped = True
@@ -139,8 +140,7 @@ class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
             else:
                 result.skipped = True
         else:
-            # ✅ Создание новой записи (get_or_create безопасен для race-conditions)
-            from django.utils import timezone
+            # Создание новой записи (get_or_create безопасен для race-conditions)
 
             created_record = SupplierStockRecord.objects.create(
                 supplier=self.supplier,
@@ -229,7 +229,7 @@ class APISupplierSyncService(BaseSupplierSyncService):
         timeout = int(self.supplier.api_extra_config.get("timeout", 30))
         current_url = self.supplier.api_url
 
-        with httpx.Client(timeout=timeout) as client:
+        with Client(timeout=timeout) as client:
             page = 1
             while True:
                 resp = client.get(current_url, headers=headers, params={"page": page, "limit": 200})
