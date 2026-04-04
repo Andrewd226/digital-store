@@ -264,25 +264,25 @@ class APISupplierSyncService(BaseSupplierSyncService):
 
 class ManualSupplierSyncService(BaseSupplierSyncService):
     """Сервис ручной синхронизации."""
-    def __init__(self, supplier: Supplier, products_ list[SupplierProductDTO]):
+    def __init__(self, supplier: Supplier, products: list[SupplierProductDTO]):
         super().__init__(supplier)
-        self.products_data = products_data
+        self._products = products
 
     def fetch_data(self) -> Iterator[SupplierProductDTO]:
-        yield from self.products_data
+        yield from self._products
 
 
 def get_sync_service(
     supplier: Supplier,
-    products_ list[SupplierProductDTO] | None = None,
+    products: list[SupplierProductDTO] | None = None,
 ) -> BaseSupplierSyncService:
     """Фабричный метод для выбора стратегии синхронизации."""
     if supplier.sync_method == Supplier.SyncMethod.API:
         return APISupplierSyncService(supplier)
     if supplier.sync_method == Supplier.SyncMethod.MANUAL:
-        if products_data is None:
-            raise ValueError("Для ручной синхронизации необходимо передать products_data")
-        return ManualSupplierSyncService(supplier, products_data)
+        if products is None:
+            raise ValueError("Для ручной синхронизации необходимо передать products")
+        return ManualSupplierSyncService(supplier, products)
     raise NotImplementedError(f"Метод синхронизации {supplier.sync_method} ещё не реализован")
 
 
