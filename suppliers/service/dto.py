@@ -1,10 +1,10 @@
 """
 suppliers/service/dto.py
 
-Data Transfer Objects (DTO) для передачи данных между слоями приложения.
-Используют Pydantic v2 для строгой валидации, сериализации и типизации.
+Граница слоя данных. Все DTO строго типизированы.
+ImmutableDTOConfig — для передачи между слоями (гарантия отсутствия побочных эффектов).
+MutableDTOConfig — для внутренней обработки внутри бизнес-логики (статистика, результаты).
 """
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -16,59 +16,49 @@ from pydantic import BaseModel, ConfigDict, Field
 from helpers.arithmetic import round_decimal
 
 # ─── Configs ──────────────────────────────────────────────────────────────────
+ImmutableDTOConfig = ConfigDict(frozen=True, arbitrary_types_allowed=True, use_enum_values=True, extra="ignore")
+MutableDTOConfig = ConfigDict(frozen=False, arbitrary_types_allowed=True, use_enum_values=True, extra="ignore")
 
-ImmutableDTOConfig = ConfigDict(
-    frozen=True,
-    arbitrary_types_allowed=True,
-    use_enum_values=True,
-    extra="ignore",
-)
-
-MutableDTOConfig = ConfigDict(
-    frozen=False,
-    arbitrary_types_allowed=True,
-    use_enum_values=True,
-    extra="ignore",
-)
-
-# ─── Annotated types ──────────────────────────────────────────────────────────
-
-SupplierSku = Annotated[str, Field(min_length=1, description="Артикул поставщика")]
-Price = Annotated[Decimal, Field(ge=0, description="Цена товара")]
-CurrencyCode = Annotated[str, Field(min_length=3, description="Код валюты (ISO 4217)")]
-NumInStock = Annotated[int, Field(ge=0, description="Количество на складе")]
-BatchSize = Annotated[int, Field(gt=0, description="Размер батча")]
-TimeoutSeconds = Annotated[int, Field(gt=0, description="Таймаут в секундах")]
+# ─── Type Aliases ─────────────────────────────────────────────────────────────
+SupplierSku = Annotated[str, Field(min_length=1)]
+Price = Annotated[Decimal, Field(ge=0)]
+CurrencyCode = Annotated[str, Field(min_length=3)]
+NumInStock = Annotated[int, Field(ge=0)]
+BatchSize = Annotated[int, Field(gt=0)]
+TimeoutSeconds = Annotated[int, Field(gt=0)]
 
 
-# ─── Product Data DTO ─────────────────────────────────────────────────────────
-
-
+# ─── Input DTO ────────────────────────────────────────────────────────────────
 class SupplierProductDTO(BaseModel):
-    """Данные товара от поставщика. Иммутабелен, безопасен для кеширования."""
-
     model_config = ImmutableDTOConfig
-
     supplier_sku: SupplierSku
     price: Price
     currency_code: CurrencyCode
     num_in_stock: NumInStock
-    product_upc: Annotated[str | None, Field(description="UPC товара")] = None
-    product_title: Annotated[str | None, Field(description="Название товара")] = None
-    config: Annotated[dict[str, Any] | None, Field(description="Доп. данные")] = None
-    source_updated_at: Annotated[
-        datetime | None, Field(description="Timestamp обновления у поставщика")
-    ] = None
+    product_upc: str | None = None
+    product_title: str | None = None
+    config: dict[str, Any] | None = None
+    source_updated_at: datetime | None = None
 
 
-# ─── Sync Result DTO ──────────────────────────────────────────────────────────
+# ─── State DTO (DAO ↔ Business) ──────────────────────────────────────────────
+class SupplierStockRecordDTO(BaseModel):
+    """Представление записи остатка на границе DAO. Immutable для передачи между слоями."""
+    model_config = ImmutableDTOConfig
+    id: int | None = None
+    supplier_sku: SupplierSku
+    price: Price
+    currency_code: CurrencyCode
+    num_in_stock: NumInStock
+    num_allocated: int = 0
+    is_active: bool = True
+    last_supplier_updated_at: datetime | None = None
+    product_upc: str | None = None
 
 
+# ─── Process Result DTO ───────────────────────────────────────────────────────
 class SyncResultDTO(BaseModel):
-    """Результат обработки одного товара. Мутируется сервисом в процессе."""
-
     model_config = MutableDTOConfig
-
     supplier_sku: SupplierSku
     created: bool = False
     updated: bool = False
@@ -84,18 +74,13 @@ class SyncResultDTO(BaseModel):
     skipped_reason: str | None = None
 
 
-# ─── Sync Stats DTO ───────────────────────────────────────────────────────────
-
-
+# ─── Stats DTO ────────────────────────────────────────────────────────────────
 class SyncStatsDTO(BaseModel):
-    """Агрегированная статистика синхронизации. Мутируется сервисом."""
-
     model_config = MutableDTOConfig
-
-    created: int = Field(default=0, ge=0, description="Создано")
-    updated: int = Field(default=0, ge=0, description="Обновлено")
-    skipped: int = Field(default=0, ge=0, description="Пропущено")
-    failed: int = Field(default=0, ge=0, description="Ошибок")
+    created: int = Field(default=0, ge=0)
+    updated: int = Field(default=0, ge=0)
+    skipped: int = Field(default=0, ge=0)
+    failed: int = Field(default=0, ge=0)
 
     @property
     def total(self) -> int:
@@ -114,3 +99,25 @@ class SyncStatsDTO(BaseModel):
     @property
     def has_changes(self) -> bool:
         return self.created > 0 or self.updated > 0
+
+
+# ─── Sync Log DTO (DAO ↔ Business) ────────────────────────────────────────────
+class SyncLogDTO(BaseModel):
+    model_config = MutableDTOConfig
+    id: int | None = None
+    supplier_code: str
+    status: str
+    triggered_by: str
+    started_at: datetime
+    finished_at: datetime | None = None
+    task_id: str | None = None
+
+
+# ─── Config DTO ───────────────────────────────────────────────────────────────
+class SyncConfigDTO(BaseModel):
+    model_config = ImmutableDTOConfig
+    triggered_by: str = "celery"
+    batch_size: BatchSize = 100
+    timeout_seconds: TimeoutSeconds = 300
+    create_missing_products: bool = False
+    deactivate_missing_products: bool = False

@@ -2,13 +2,12 @@
 catalogue/dao.py
 
 Data Access Object для товаров каталога.
-Размещен в catalogue, так как Product — сущность этого домена.
+Все методы принимают и возвращают только DTO или скалярные значения.
 """
 
 from __future__ import annotations
 
-from django.db.models import QuerySet
-
+from catalogue.dto import ProductDTO
 from catalogue.models import Product
 
 
@@ -16,7 +15,15 @@ class ProductDAO:
     """DAO для операций с товарами каталога."""
 
     @staticmethod
-    def get_by_upc(upc: str | None) -> Product | None:
+    def _to_dto(product: Product) -> ProductDTO:
+        return ProductDTO(
+            id=product.id,
+            title=product.title,
+            upc=product.upc or None,
+        )
+
+    @staticmethod
+    def get_by_upc(upc: str | None) -> ProductDTO | None:
         """
         Получает товар по универсальному коду (UPC).
         Безопасно обрабатывает None и пустые строки.
@@ -24,11 +31,14 @@ class ProductDAO:
         if not upc:
             return None
         try:
-            return Product.objects.get(upc=upc)
+            return ProductDAO._to_dto(Product.objects.get(upc=upc))
         except Product.DoesNotExist:
             return None
 
     @staticmethod
-    def get_by_upc_list(upc_list: list[str]) -> QuerySet[Product]:
-        """Возвращает queryset товаров по списку UPC (использует SQL IN)."""
-        return Product.objects.filter(upc__in=upc_list)
+    def get_by_upc_list(upc_list: list[str]) -> list[ProductDTO]:
+        """Возвращает список DTO товаров по списку UPC."""
+        return [
+            ProductDAO._to_dto(p)
+            for p in Product.objects.filter(upc__in=upc_list)
+        ]
