@@ -82,11 +82,18 @@ class TestSupplierCredential:
             assert db_value != plain_secret
 
     def test_one_to_one_constraint(self, supplier_api):
-        SupplierCredential.objects.create(supplier=supplier_api, api_key="key1")
+        SupplierCredential.objects.create(
+            supplier=supplier_api, 
+            api_key="key1", 
+            api_secret="secret1"
+        )
         with pytest.raises(IntegrityError):
             with transaction.atomic():
-                SupplierCredential.objects.create(supplier=supplier_api, api_key="key2")
-
+                SupplierCredential.objects.create(
+                    supplier=supplier_api, 
+                    api_key="key2", 
+                    api_secret="secret2"
+                )
 
 # ─── SupplierStockRecord Tests ────────────────────────────────────────────────
 
