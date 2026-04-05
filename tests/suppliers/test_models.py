@@ -60,7 +60,7 @@ class TestSupplierCredential:
     """Тесты учетных данных (шифрование + уникальность)."""
 
     def test_str_representation(self, supplier_api):
-        cred = SupplierCredential.objects.create(supplier=supplier_api, api_key="key")
+        cred = SupplierCredential.objects.create(supplier=supplier_api, api_key="key", api_secret="secret")
         assert str(cred) == f"Credentials for {supplier_api.name}"
 
     def test_encrypted_fields_transparency(self, supplier_api):
