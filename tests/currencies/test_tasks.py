@@ -173,7 +173,7 @@ class TestSyncCurrencyRates:
         with patch("currencies.tasks.httpx.get", return_value=mock_response):
             result = sync_currency_rates(coincap_source_with_credential.id)
 
-        assert result.status == "success"
+        assert result.status == "SUCCESS"
         # 2 валюты = 2 кросс-пары (USD→RUB, RUB→USD)
         assert result.rates_updated == 2
         assert result.error is None
@@ -248,7 +248,7 @@ class TestSyncAllCurrencyRates:
 
         # Только один активный источник
         assert len(results) == 1
-        assert results[0].status == "success"
+        assert results[0].status == "SUCCESS"
 
     def test_returns_list_of_sync_result_dtos(self, coincap_source_with_credential, usd, rub):
         api_items = [{"id": "united-states-dollar", "rateUsd": "1.0"}]

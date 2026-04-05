@@ -22,9 +22,9 @@ from helpers.arithmetic import round_decimal
 class Supplier(models.Model):
     """Модель поставщика. Хранит настройки синхронизации и метод подключения."""
     class SyncMethod(models.TextChoices):
-        API = "api", _("REST API")
-        MANUAL = "manual", _("Ручная загрузка")
-        FTP = "ftp", _("FTP/SFTP")
+        API = "API", _("REST API")
+        MANUAL = "MANUAL", _("Ручная загрузка")
+        FTP = "FTP", _("FTP/SFTP")
 
     name = models.TextField(_("Название"))
     code = models.TextField(
@@ -154,11 +154,11 @@ class SupplierStockRecord(models.Model):
 class SupplierStockHistory(models.Model):
     """Append-only история изменений цен и остатков. Не подлежит редактированию."""
     class ChangeType(models.TextChoices):
-        CREATED = "created", _("Создано")
-        PRICE_CHANGED = "price", _("Изменение цены")
-        STOCK_CHANGED = "stock", _("Изменение остатка")
-        BOTH_CHANGED = "both", _("Изменение цены и остатка")
-        DEACTIVATED = "deactivated", _("Деактивировано")
+        CREATED = "CREATED", _("Создано")
+        PRICE_CHANGED = "PRICE_CHANGED", _("Изменение цены")
+        STOCK_CHANGED = "STOCK_CHANGED", _("Изменение остатка")
+        BOTH_CHANGED = "BOTH_CHANGED", _("Изменение цены и остатка")
+        DEACTIVATED = "DEACTIVATED", _("Деактивировано")
 
     stock_record = models.ForeignKey(
         SupplierStockRecord,
@@ -220,11 +220,11 @@ class SupplierStockHistory(models.Model):
 class SupplierCatalogSync(models.Model):
     """Лог выполнения задач синхронизации каталогов."""
     class Status(models.TextChoices):
-        PENDING = "pending", _("Ожидание")
-        RUNNING = "running", _("Выполняется")
-        SUCCESS = "success", _("Успешно")
-        PARTIAL = "partial", _("Частично выполнено")
-        FAILED = "failed", _("Ошибка")
+        PENDING = "PENDING", _("Ожидание")
+        RUNNING = "RUNNING", _("Выполняется")
+        SUCCESS = "SUCCESS", _("Успешно")
+        PARTIAL = "PARTIAL", _("Частично выполнено")
+        FAILED = "FAILED", _("Ошибка")
 
     supplier = models.ForeignKey(
         Supplier, on_delete=models.CASCADE, related_name="sync_logs", verbose_name=_("Поставщик")

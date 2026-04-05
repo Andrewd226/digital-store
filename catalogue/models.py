@@ -29,17 +29,17 @@ class MasterCatalogSync(models.Model):
     """
 
     class Status(models.TextChoices):
-        PENDING = "pending", "Ожидает"
-        RUNNING = "running", "Выполняется"
-        SUCCESS = "success", "Успешно"
-        PARTIAL = "partial", "Частично"
-        FAILED = "failed", "Ошибка"
+        PENDING = "PENDING", "Ожидает"
+        RUNNING = "RUNNING", "Выполняется"
+        SUCCESS = "SUCCESS", "Успешно"
+        PARTIAL = "PARTIAL", "Частично"
+        FAILED = "FAILED", "Ошибка"
 
     class SyncSource(models.TextChoices):
-        MANUAL = "manual", "Вручную"
-        IMPORT = "import", "Импорт файла"
-        API = "api", "Внешний API"
-        CELERY = "celery", "Планировщик"
+        MANUAL = "MANUAL", "Вручную"
+        IMPORT = "IMPORT", "Импорт файла"
+        API = "API", "Внешний API"
+        CELERY = "CELERY", "Планировщик"
 
     status = models.TextField(
         choices=Status.choices,
@@ -165,8 +165,8 @@ class MasterPrice(models.Model):
         verbose_name="Товар",
     )
     price = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=False,
         blank=False,
         verbose_name="Цена",
@@ -194,8 +194,8 @@ class MasterPrice(models.Model):
         verbose_name="Применённый курс (FK)",
     )
     applied_rate_value = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=False,
         blank=False,
         verbose_name="Значение курса на момент пересчёта",
@@ -251,26 +251,26 @@ class MasterPriceHistory(models.Model):
 
     # NULL при первом создании записи
     price_before = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=True,
         blank=True,
         verbose_name="Цена до",
     )
     price_after = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=False,
         blank=False,
         verbose_name="Цена после",
     )
 
     class ChangeReason(models.TextChoices):
-        CREATED = "created", "Создана"
-        SUPPLIER_PRICE = "supplier_price", "Изменилась цена поставщика"
-        EXCHANGE_RATE = "exchange_rate", "Изменился курс валют"
-        SUPPLIER_CHANGED = "supplier_changed", "Смена поставщика-источника"
-        MANUAL = "manual", "Ручное изменение"
+        CREATED = "CREATED", "Создана"
+        SUPPLIER_PRICE = "SUPPLIER_PRICE", "Изменилась цена поставщика"
+        EXCHANGE_RATE = "EXCHANGE_RATE", "Изменился курс валют"
+        SUPPLIER_CHANGED = "SUPPLIER_CHANGED", "Смена поставщика-источника"
+        MANUAL = "MANUAL", "Ручное изменение"
 
     change_reason = models.TextField(
         choices=ChangeReason.choices,
@@ -283,8 +283,8 @@ class MasterPriceHistory(models.Model):
     snapshot_currency_code = models.TextField(verbose_name="Код валюты (снимок)")
     snapshot_supplier_name = models.TextField(blank=True, verbose_name="Поставщик (снимок)")
     snapshot_supplier_price = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=True,
         blank=True,
         verbose_name="Цена поставщика (снимок)",
@@ -293,8 +293,8 @@ class MasterPriceHistory(models.Model):
         blank=True, verbose_name="Валюта поставщика (снимок)"
     )
     snapshot_applied_rate = models.DecimalField(
-        max_digits=18,
-        decimal_places=18,
+        max_digits=50,
+        decimal_places=25,
         null=True,
         blank=True,
         verbose_name="Курс на момент изменения (снимок)",

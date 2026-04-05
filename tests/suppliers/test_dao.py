@@ -221,14 +221,14 @@ class TestSupplierCatalogSyncDAO:
     def test_create_running(self, supplier_api):
         sync = SupplierCatalogSyncDAO.create_running(supplier=supplier_api, triggered_by="pytest")
         assert sync.supplier == supplier_api
-        assert sync.status == "running"
+        assert sync.status == "RUNNING"
         assert sync.triggered_by == "pytest"
 
     def test_complete(self, supplier_api):
         sync = SupplierCatalogSyncDAO.create_running(supplier=supplier_api)
         completed = SupplierCatalogSyncDAO.complete(
             sync_record=sync,
-            status="success",
+            status="SUCCESS",
             total_items=10,
             created_items=5,
             updated_items=3,
@@ -236,7 +236,7 @@ class TestSupplierCatalogSyncDAO:
             failed_items=1,
             error_log="",
         )
-        assert completed.status == "success"
+        assert completed.status == "SUCCESS"
         assert completed.total_items == 10
         assert completed.finished_at is not None
 

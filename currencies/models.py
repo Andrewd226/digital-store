@@ -18,11 +18,11 @@ class CurrencyRateSource(models.Model):
     """
 
     class SourceType(models.TextChoices):
-        CBR = "cbr", "ЦБ РФ"
-        ECB = "ecb", "Европейский ЦБ"
-        OPEN_ER = "open_er", "OpenExchangeRates"
-        FIXER = "fixer", "Fixer.io"
-        CUSTOM_API = "custom_api", "Кастомный API"
+        CBR = "CBR", "ЦБ РФ"
+        ECB = "ECB", "Европейский ЦБ"
+        OPEN_ER = "OPEN_ER", "OpenExchangeRates"
+        FIXER = "FIXER", "Fixer.io"
+        CUSTOM_API = "CUSTOM_API", "Кастомный API"
 
     name = models.TextField(unique=True, verbose_name="Название")
     source_type = models.TextField(
@@ -255,10 +255,10 @@ class CurrencyRateSync(models.Model):
     """
 
     class Status(models.TextChoices):
-        PENDING = "pending", "Ожидает"
-        RUNNING = "running", "Выполняется"
-        SUCCESS = "success", "Успешно"
-        FAILED = "failed", "Ошибка"
+        PENDING = "PENDING", "Ожидает"
+        RUNNING = "RUNNING", "Выполняется"
+        SUCCESS = "SUCCESS", "Успешно"
+        FAILED = "FAILED", "Ошибка"
 
     source = models.ForeignKey(
         "CurrencyRateSource",
