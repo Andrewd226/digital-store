@@ -311,21 +311,15 @@ class TestSupplierCatalogSync:
     """Тесты логов синхронизации."""
 
     def test_str_representation(self, supplier_api):
-        now = timezone.now()
-        sync = SupplierCatalogSync.objects.create(
-            supplier=supplier_api, status=SupplierCatalogSync.Status.RUNNING, started_at=now
-        )
+        sync = SupplierCatalogSync.objects.create(supplier=supplier_api, status=SupplierCatalogSync.Status.RUNNING)
         assert supplier_api.name in str(sync)
         assert "RUNNING" in str(sync)
 
     def test_duration_seconds_property(self, supplier_api):
-        started = timezone.now()
-        time.sleep(0.05)
         finished = timezone.now()
         sync = SupplierCatalogSync.objects.create(
             supplier=supplier_api,
             status=SupplierCatalogSync.Status.SUCCESS,
-            started_at=started,
             finished_at=finished,
         )
         assert sync.duration_seconds >= 0
