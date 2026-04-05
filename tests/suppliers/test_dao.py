@@ -125,32 +125,6 @@ class TestSupplierStockRecordDAO:
         active = SupplierStockRecordDAO.get_active_by_supplier(supplier_api)
         assert active.count() == 1
 
-    def test_deactivate_missing(self, supplier_api, product_test, product_test_2, rub):
-        SupplierStockRecord.objects.create(
-            supplier=supplier_api,
-            product=product_test,
-            supplier_sku="ART-001",
-            price=Decimal("999.99"),
-            currency=rub,
-            num_in_stock=100,
-            is_active=True,
-        )
-        SupplierStockRecord.objects.create(
-            supplier=supplier_api,
-            product=product_test_2,
-            supplier_sku="ART-002",
-            price=Decimal("500.00"),
-            currency=rub,
-            num_in_stock=50,
-            is_active=True,
-        )
-        deactivated = SupplierStockRecordDAO.deactivate_missing(
-            supplier=supplier_api,
-            active_skus=["ART-001"],
-        )
-        assert deactivated == 1
-
-
 # ─── SupplierStockHistoryDAO Tests ────────────────────────────────────────────
 
 

@@ -119,18 +119,6 @@ class SupplierStockRecordDAO:
         if records:
             SupplierStockRecord.objects.bulk_update(records, fields)
 
-    @staticmethod
-    def deactivate_missing(supplier: Supplier, active_skus: list[str]) -> int:
-        """Деактивирует записи, отсутствующие в текущей выгрузке."""
-        deactivated = (
-            SupplierStockRecord.objects.filter(supplier=supplier, is_active=True)
-            .exclude(supplier_sku__in=active_skus)
-            .update(is_active=False)
-        )
-        if deactivated > 0:
-            logger.info("Деактивировано %d записей остатков для %s", deactivated, supplier.name)
-        return deactivated
-
 
 # ─── SupplierStockHistory DAO ─────────────────────────────────────────────────
 
