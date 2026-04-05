@@ -125,6 +125,7 @@ class TestSupplierStockRecordDAO:
         active = SupplierStockRecordDAO.get_active_by_supplier(supplier_api)
         assert active.count() == 1
 
+
 # ─── SupplierStockHistoryDAO Tests ────────────────────────────────────────────
 
 

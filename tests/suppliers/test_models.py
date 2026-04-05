@@ -8,7 +8,6 @@ tests/suppliers/test_models.py
 
 from __future__ import annotations
 
-import time
 from decimal import Decimal
 
 import pytest
@@ -311,7 +310,9 @@ class TestSupplierCatalogSync:
     """Тесты логов синхронизации."""
 
     def test_str_representation(self, supplier_api):
-        sync = SupplierCatalogSync.objects.create(supplier=supplier_api, status=SupplierCatalogSync.Status.RUNNING)
+        sync = SupplierCatalogSync.objects.create(
+            supplier=supplier_api, status=SupplierCatalogSync.Status.RUNNING
+        )
         assert supplier_api.name in str(sync)
         assert "RUNNING" in str(sync)
 
