@@ -11,16 +11,20 @@ suppliers/models.py
 """
 
 from __future__ import annotations
+
 from decimal import Decimal
+
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from encrypted_fields.fields import EncryptedTextField
+
 from helpers.arithmetic import round_decimal
 
 
 class Supplier(models.Model):
     """Модель поставщика. Хранит настройки синхронизации и метод подключения."""
+
     class SyncMethod(models.TextChoices):
         API = "API", _("REST API")
         MANUAL = "MANUAL", _("Ручная загрузка")
@@ -85,6 +89,7 @@ class SupplierCredential(models.Model):
 
 class SupplierStockRecord(models.Model):
     """Текущие остатки и цена товара от конкретного поставщика."""
+
     supplier = models.ForeignKey(
         Supplier,
         on_delete=models.CASCADE,
@@ -153,6 +158,7 @@ class SupplierStockRecord(models.Model):
 
 class SupplierStockHistory(models.Model):
     """Append-only история изменений цен и остатков. Не подлежит редактированию."""
+
     class ChangeType(models.TextChoices):
         CREATED = "CREATED", _("Создано")
         PRICE_CHANGED = "PRICE_CHANGED", _("Изменение цены")
@@ -219,6 +225,7 @@ class SupplierStockHistory(models.Model):
 
 class SupplierCatalogSync(models.Model):
     """Лог выполнения задач синхронизации каталогов."""
+
     class Status(models.TextChoices):
         PENDING = "PENDING", _("Ожидание")
         RUNNING = "RUNNING", _("Выполняется")

@@ -5,6 +5,7 @@ tests/suppliers/test_models.py
 Проверяют целостность данных, свойства, ограничения, типы полей и поведение связей.
 Соответствует правилам: TextField, Decimal(50,25), EncryptedTextField, PROTECT/CASCADE.
 """
+
 from __future__ import annotations
 
 import time
@@ -23,7 +24,6 @@ from suppliers.models import (
     SupplierStockHistory,
     SupplierStockRecord,
 )
-
 
 # ─── Supplier Tests ───────────────────────────────────────────────────────────
 
@@ -60,7 +60,9 @@ class TestSupplierCredential:
     """Тесты учетных данных (шифрование + уникальность)."""
 
     def test_str_representation(self, supplier_api):
-        cred = SupplierCredential.objects.create(supplier=supplier_api, api_key="key", api_secret="secret")
+        cred = SupplierCredential.objects.create(
+            supplier=supplier_api, api_key="key", api_secret="secret"
+        )
         assert str(cred) == f"Credentials for {supplier_api.name}"
 
     def test_encrypted_fields_transparency(self, supplier_api):
@@ -73,6 +75,7 @@ class TestSupplierCredential:
 
         # Проверка на уровне БД: в таблице данные не должны совпадать с открытым текстом
         from django.db import connection
+
         with connection.cursor() as cursor:
             cursor.execute(
                 "SELECT api_secret FROM suppliers_suppliercredential WHERE id = %s",
@@ -83,17 +86,14 @@ class TestSupplierCredential:
 
     def test_one_to_one_constraint(self, supplier_api):
         SupplierCredential.objects.create(
-            supplier=supplier_api, 
-            api_key="key1", 
-            api_secret="secret1"
+            supplier=supplier_api, api_key="key1", api_secret="secret1"
         )
         with pytest.raises(IntegrityError):
             with transaction.atomic():
                 SupplierCredential.objects.create(
-                    supplier=supplier_api, 
-                    api_key="key2", 
-                    api_secret="secret2"
+                    supplier=supplier_api, api_key="key2", api_secret="secret2"
                 )
+
 
 # ─── SupplierStockRecord Tests ────────────────────────────────────────────────
 
@@ -135,29 +135,45 @@ class TestSupplierStockRecord:
     def test_price_precision_50_25(self, supplier_api, product_test, rub):
         high_precision = Decimal("9999999999999999999999999.9999999999999999999999999")
         record = SupplierStockRecord.objects.create(
-            supplier=supplier_api, product=product_test,
-            supplier_sku="HIGH-PREC", price=high_precision, currency=rub, num_in_stock=1
+            supplier=supplier_api,
+            product=product_test,
+            supplier_sku="HIGH-PREC",
+            price=high_precision,
+            currency=rub,
+            num_in_stock=1,
         )
         assert record.price == high_precision
 
     def test_negative_price_validation(self, supplier_api, product_test, rub):
         with pytest.raises(ValidationError):
             record = SupplierStockRecord(
-                supplier=supplier_api, product=product_test,
-                supplier_sku="NEG", price=Decimal("-10.00"), currency=rub, num_in_stock=0
+                supplier=supplier_api,
+                product=product_test,
+                supplier_sku="NEG",
+                price=Decimal("-10.00"),
+                currency=rub,
+                num_in_stock=0,
             )
             record.full_clean()
 
     def test_unique_supplier_product_constraint(self, supplier_api, product_test, rub):
         SupplierStockRecord.objects.create(
-            supplier=supplier_api, product=product_test,
-            supplier_sku="SKU1", price=Decimal("100"), currency=rub, num_in_stock=1
+            supplier=supplier_api,
+            product=product_test,
+            supplier_sku="SKU1",
+            price=Decimal("100"),
+            currency=rub,
+            num_in_stock=1,
         )
         with pytest.raises(IntegrityError):
             with transaction.atomic():
                 SupplierStockRecord.objects.create(
-                    supplier=supplier_api, product=product_test,
-                    supplier_sku="SKU2", price=Decimal("200"), currency=rub, num_in_stock=1
+                    supplier=supplier_api,
+                    product=product_test,
+                    supplier_sku="SKU2",
+                    price=Decimal("200"),
+                    currency=rub,
+                    num_in_stock=1,
                 )
 
     def test_protect_on_delete_product(self, stock_record, product_test):
@@ -180,48 +196,68 @@ class TestSupplierStockHistory:
 
     def test_str_representation(self, stock_record):
         history = SupplierStockHistory.objects.create(
-            stock_record=stock_record, sync=None,
-            snapshot_supplier_name="Test", snapshot_product_title="Test",
-            snapshot_product_upc="", snapshot_supplier_sku="SKU",
+            stock_record=stock_record,
+            sync=None,
+            snapshot_supplier_name="Test",
+            snapshot_product_title="Test",
+            snapshot_product_upc="",
+            snapshot_supplier_sku="SKU",
             snapshot_currency_code="RUB",
-            price_before=Decimal("100.00"), price_after=Decimal("150.50"),
-            num_in_stock_before=10, num_in_stock_after=15,
+            price_before=Decimal("100.00"),
+            price_after=Decimal("150.50"),
+            num_in_stock_before=10,
+            num_in_stock_after=15,
             change_type=SupplierStockHistory.ChangeType.PRICE_CHANGED,
         )
         assert "SKU: 100.00 -> 150.50" in str(history)
 
     def test_price_delta_created(self, stock_record):
         history = SupplierStockHistory.objects.create(
-            stock_record=stock_record, sync=None,
-            snapshot_supplier_name="T", snapshot_product_title="T",
-            snapshot_product_upc="", snapshot_supplier_sku="SKU",
+            stock_record=stock_record,
+            sync=None,
+            snapshot_supplier_name="T",
+            snapshot_product_title="T",
+            snapshot_product_upc="",
+            snapshot_supplier_sku="SKU",
             snapshot_currency_code="RUB",
-            price_before=None, price_after=Decimal("99.99"),
-            num_in_stock_before=None, num_in_stock_after=1,
+            price_before=None,
+            price_after=Decimal("99.99"),
+            num_in_stock_before=None,
+            num_in_stock_after=1,
             change_type=SupplierStockHistory.ChangeType.CREATED,
         )
         assert history.price_delta == Decimal("99.99")
 
     def test_price_delta_updated(self, stock_record):
         history = SupplierStockHistory.objects.create(
-            stock_record=stock_record, sync=None,
-            snapshot_supplier_name="T", snapshot_product_title="T",
-            snapshot_product_upc="", snapshot_supplier_sku="SKU",
+            stock_record=stock_record,
+            sync=None,
+            snapshot_supplier_name="T",
+            snapshot_product_title="T",
+            snapshot_product_upc="",
+            snapshot_supplier_sku="SKU",
             snapshot_currency_code="RUB",
-            price_before=Decimal("100.00"), price_after=Decimal("80.00"),
-            num_in_stock_before=10, num_in_stock_after=5,
+            price_before=Decimal("100.00"),
+            price_after=Decimal("80.00"),
+            num_in_stock_before=10,
+            num_in_stock_after=5,
             change_type=SupplierStockHistory.ChangeType.BOTH_CHANGED,
         )
         assert history.price_delta == Decimal("-20.00")
 
     def test_price_delta_pct_normal(self, stock_record):
         history = SupplierStockHistory.objects.create(
-            stock_record=stock_record, sync=None,
-            snapshot_supplier_name="T", snapshot_product_title="T",
-            snapshot_product_upc="", snapshot_supplier_sku="SKU",
+            stock_record=stock_record,
+            sync=None,
+            snapshot_supplier_name="T",
+            snapshot_product_title="T",
+            snapshot_product_upc="",
+            snapshot_supplier_sku="SKU",
             snapshot_currency_code="RUB",
-            price_before=Decimal("100.00"), price_after=Decimal("125.50"),
-            num_in_stock_before=10, num_in_stock_after=10,
+            price_before=Decimal("100.00"),
+            price_after=Decimal("125.50"),
+            num_in_stock_before=10,
+            num_in_stock_after=10,
             change_type=SupplierStockHistory.ChangeType.PRICE_CHANGED,
         )
         # (25.50 / 100.00) * 100 = 25.50
@@ -229,12 +265,17 @@ class TestSupplierStockHistory:
 
     def test_price_delta_pct_zero_division_guard(self, stock_record):
         history = SupplierStockHistory.objects.create(
-            stock_record=stock_record, sync=None,
-            snapshot_supplier_name="T", snapshot_product_title="T",
-            snapshot_product_upc="", snapshot_supplier_sku="SKU",
+            stock_record=stock_record,
+            sync=None,
+            snapshot_supplier_name="T",
+            snapshot_product_title="T",
+            snapshot_product_upc="",
+            snapshot_supplier_sku="SKU",
             snapshot_currency_code="RUB",
-            price_before=Decimal("0.00"), price_after=Decimal("10.00"),
-            num_in_stock_before=10, num_in_stock_after=10,
+            price_before=Decimal("0.00"),
+            price_after=Decimal("10.00"),
+            num_in_stock_before=10,
+            num_in_stock_after=10,
             change_type=SupplierStockHistory.ChangeType.PRICE_CHANGED,
         )
         assert history.price_delta_pct == Decimal("0.00")
@@ -244,12 +285,17 @@ class TestSupplierStockHistory:
             supplier=supplier_api, status=SupplierCatalogSync.Status.SUCCESS
         )
         history = SupplierStockHistory.objects.create(
-            stock_record=stock_record, sync=sync,
-            snapshot_supplier_name="T", snapshot_product_title="T",
-            snapshot_product_upc="", snapshot_supplier_sku="SKU",
+            stock_record=stock_record,
+            sync=sync,
+            snapshot_supplier_name="T",
+            snapshot_product_title="T",
+            snapshot_product_upc="",
+            snapshot_supplier_sku="SKU",
             snapshot_currency_code="RUB",
-            price_before=None, price_after=Decimal("50"),
-            num_in_stock_before=None, num_in_stock_after=5,
+            price_before=None,
+            price_after=Decimal("50"),
+            num_in_stock_before=None,
+            num_in_stock_after=5,
             change_type=SupplierStockHistory.ChangeType.CREATED,
         )
         sync.delete()
@@ -277,8 +323,10 @@ class TestSupplierCatalogSync:
         time.sleep(0.05)
         finished = timezone.now()
         sync = SupplierCatalogSync.objects.create(
-            supplier=supplier_api, status=SupplierCatalogSync.Status.SUCCESS,
-            started_at=started, finished_at=finished
+            supplier=supplier_api,
+            status=SupplierCatalogSync.Status.SUCCESS,
+            started_at=started,
+            finished_at=finished,
         )
         assert sync.duration_seconds >= 0
 
