@@ -2,6 +2,7 @@
 suppliers/models.py
 
 Модуль поставщиков: учет цен, остатков и истории изменений.
+
 Правила:
 - Все строковые поля → TextField
 - Все денежные поля → DecimalField(max_digits=50, decimal_places=25)
@@ -10,20 +11,16 @@ suppliers/models.py
 """
 
 from __future__ import annotations
-
 from decimal import Decimal
-
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from encrypted_fields.fields import EncryptedTextField
-
 from helpers.arithmetic import round_decimal
 
 
 class Supplier(models.Model):
     """Модель поставщика. Хранит настройки синхронизации и метод подключения."""
-
     class SyncMethod(models.TextChoices):
         API = "api", _("REST API")
         MANUAL = "manual", _("Ручная загрузка")
@@ -39,19 +36,16 @@ class Supplier(models.Model):
     api_url = models.TextField(_("URL API"), blank=True, default="")
     api_extra_config = models.JSONField(_("Доп. конфигурация API"), default=dict, blank=True)
     sync_schedule = models.TextField(_("Расписание синхронизации (cron)"), default="0 6 * * *")
-
     default_currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
         related_name="default_suppliers",
         verbose_name=_("Валюта по умолчанию"),
     )
-
     priority = models.PositiveIntegerField(
         _("Приоритет"), default=100, help_text=_("Меньше число — выше приоритет")
     )
     supplier_is_active = models.BooleanField(_("Активен"), default=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -68,6 +62,7 @@ class Supplier(models.Model):
 class SupplierCredential(models.Model):
     """
     Учетные данные для доступа к API/FTP поставщика.
+
     🔒 Чувствительные поля зашифрованы на уровне БД.
     """
 
@@ -77,7 +72,6 @@ class SupplierCredential(models.Model):
     api_key = EncryptedTextField(_("API Key"), blank=True)
     api_secret = EncryptedTextField(_("API Secret"), blank=True)
     extra = models.JSONField(_("Доп. данные"), default=dict, blank=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -91,7 +85,6 @@ class SupplierCredential(models.Model):
 
 class SupplierStockRecord(models.Model):
     """Текущие остатки и цена товара от конкретного поставщика."""
-
     supplier = models.ForeignKey(
         Supplier,
         on_delete=models.CASCADE,
@@ -104,9 +97,7 @@ class SupplierStockRecord(models.Model):
         related_name="supplier_stock_records",
         verbose_name=_("Товар"),
     )
-
     supplier_sku = models.TextField(_("Артикул поставщика"), db_index=True)
-
     price = models.DecimalField(
         _("Цена"),
         max_digits=50,
@@ -114,20 +105,17 @@ class SupplierStockRecord(models.Model):
         default=Decimal("0"),
         validators=[MinValueValidator(0)],
     )
-
     currency = models.ForeignKey(
         "core.Currency",
         on_delete=models.PROTECT,
         related_name="stock_records",
         verbose_name=_("Валюта"),
     )
-
     num_in_stock = models.PositiveIntegerField(_("Количество на складе"), default=0)
     num_allocated = models.PositiveIntegerField(
         _("Зарезервировано"), default=0, help_text=_("Количество в активных заказах")
     )
     is_active = models.BooleanField(_("Активен"), default=True)
-
     # Версионирование данных для защиты от перезаписи новых значений старыми
     last_supplier_updated_at = models.DateTimeField(
         _("Время обновления у поставщика"),
@@ -135,7 +123,6 @@ class SupplierStockRecord(models.Model):
         blank=True,
         help_text=_("Если incoming.updated_at <= record.updated_at, обновление пропускается."),
     )
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -166,7 +153,6 @@ class SupplierStockRecord(models.Model):
 
 class SupplierStockHistory(models.Model):
     """Append-only история изменений цен и остатков. Не подлежит редактированию."""
-
     class ChangeType(models.TextChoices):
         CREATED = "created", _("Создано")
         PRICE_CHANGED = "price", _("Изменение цены")
@@ -188,23 +174,19 @@ class SupplierStockHistory(models.Model):
         related_name="history_records",
         verbose_name=_("Синхронизация"),
     )
-
     # Все снимки данных → TextField (денормализация для аудита)
     snapshot_supplier_name = models.TextField(_("Название поставщика"))
     snapshot_product_title = models.TextField(_("Название товара"))
     snapshot_product_upc = models.TextField(_("UPC"), blank=True, default="")
     snapshot_supplier_sku = models.TextField(_("Артикул поставщика"))
     snapshot_currency_code = models.TextField(_("Код валюты"))
-
-    #  Точность цены в истории совпадает с основной таблицей
+    # Точность цены в истории совпадает с основной таблицей
     price_before = models.DecimalField(
         _("Цена до"), max_digits=50, decimal_places=25, null=True, blank=True
     )
     price_after = models.DecimalField(_("Цена после"), max_digits=50, decimal_places=25)
-
     num_in_stock_before = models.PositiveIntegerField(_("Остаток до"), null=True, blank=True)
     num_in_stock_after = models.PositiveIntegerField(_("Остаток после"))
-
     change_type = models.TextField(_("Тип изменения"), choices=ChangeType.choices)
     recorded_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
@@ -237,7 +219,6 @@ class SupplierStockHistory(models.Model):
 
 class SupplierCatalogSync(models.Model):
     """Лог выполнения задач синхронизации каталогов."""
-
     class Status(models.TextChoices):
         PENDING = "pending", _("Ожидание")
         RUNNING = "running", _("Выполняется")
@@ -250,15 +231,12 @@ class SupplierCatalogSync(models.Model):
     )
     status = models.TextField(_("Статус"), choices=Status.choices, default=Status.PENDING)
     triggered_by = models.TextField(_("Запущено"), default="celery")
-
     # Поле для связки с асинхронными задачами Celery
     task_id = models.TextField(
         _("Celery Task ID"), blank=True, default="", help_text=_("ID асинхронной задачи")
     )
-
     started_at = models.DateTimeField(_("Начало"), auto_now_add=True)
     finished_at = models.DateTimeField(_("Окончание"), null=True, blank=True)
-
     total_items = models.PositiveIntegerField(_("Всего элементов"), default=0)
     created_items = models.PositiveIntegerField(_("Создано"), default=0)
     updated_items = models.PositiveIntegerField(_("Обновлено"), default=0)
