@@ -42,8 +42,8 @@ class TestSupplier:
 
     def test_sync_method_choices(self):
         assert Supplier.SyncMethod.API == "API"
-        assert Supplier.SyncMethod.MANUAL == "manual"
-        assert Supplier.SyncMethod.FTP == "ftp"
+        assert Supplier.SyncMethod.MANUAL == "MANUAL"
+        assert Supplier.SyncMethod.FTP == "FTP"
 
     def test_default_values(self, supplier_api):
         assert supplier_api.priority == 100
