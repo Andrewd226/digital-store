@@ -85,8 +85,8 @@ class CurrencyRateSourceCredential(models.Model):
         related_name="credential",
         verbose_name="Источник",
     )
-    api_key = EncryptedTextField(_("API Key"), blank=True)
-    api_secret = EncryptedTextField(_("API Secret"), blank=True)
+    api_key = EncryptedTextField(_("API Key"), blank=True, default="")
+    api_secret = EncryptedTextField(_("API Secret"), blank=True, default="")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -69,8 +69,8 @@ class SupplierCredential(models.Model):
     supplier = models.OneToOneField(
         Supplier, on_delete=models.CASCADE, related_name="credential", verbose_name=_("Поставщик")
     )
-    api_key = EncryptedTextField(_("API Key"), blank=True)
-    api_secret = EncryptedTextField(_("API Secret"), blank=True)
+    api_key = EncryptedTextField(_("API Key"), blank=True, default="")
+    api_secret = EncryptedTextField(_("API Secret"), blank=True, default="")
     extra = models.JSONField(_("Доп. данные"), default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
