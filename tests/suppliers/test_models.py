@@ -41,7 +41,7 @@ class TestSupplier:
         assert f"{supplier_api.name} (Отключён)" == str(supplier_api)
 
     def test_sync_method_choices(self):
-        assert Supplier.SyncMethod.API == "api"
+        assert Supplier.SyncMethod.API == "API"
         assert Supplier.SyncMethod.MANUAL == "manual"
         assert Supplier.SyncMethod.FTP == "ftp"
 
