@@ -1,178 +1,247 @@
 """
 suppliers/service/dao.py
 
-Граница доступа к данным. 
-Публичный API принимает/возвращает ТОЛЬКО DTO или скалярные значения.
-Все ORM-модели, маппинг, FK-резолвинг и пакетные операции инкапсулированы внутри.
+Data Access Objects сервиса синхронизации каталогов поставщиков.
+Единственный слой, обращающийся к ORM напрямую.
+Принимает и возвращает только DTO или скалярные значения.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
-from decimal import Decimal
-from typing import TYPE_CHECKING
 
-from django.db import transaction
-from django.db.models import QuerySet
 from django.utils import timezone
 
-from core.dao import CurrencyDAO
-from catalogue.dao import ProductDAO
 from suppliers.models import (
     Supplier,
-    SupplierCaыtalogSync,
+    SupplierCatalogSync,
     SupplierCredential,
-    SupplierStockHistory, 
+    SupplierStockHistory,
     SupplierStockRecord,
 )
-from suppliers.service.dto import SupplierStockRecordDTO, SyncLogDTO, SyncStatsDTO
-
-if TYPE_CHECKING:
-    from core.models import Currency
-    from catalogue.models import Product
+from suppliers.service.dto import (
+    CatalogSyncResultDTO,
+    SupplierCredentialDTO,
+    SupplierDTO,
+    SupplierStockHistoryCreateDTO,
+    SupplierStockRecordCreateDTO,
+    SupplierStockRecordDTO,
+    SupplierStockRecordUpdateDTO,
+)
 
 logger = logging.getLogger(__name__)
 
-
-# ─── Internal Mappers ─────────────────────────────────────────────────────────
-def _to_record_dto(record: SupplierStockRecord) -> SupplierStockRecordDTO:
-    return SupplierStockRecordDTO(
-        id=record.id,
-        supplier_sku=record.supplier_sku,
-        price=record.price,
-        currency_code=record.currency.currency_code,
-        num_in_stock=record.num_in_stock,
-        num_allocated=record.num_allocated,
-        is_active=record.is_active,
-        last_supplier_updated_at=record.last_supplier_updated_at,
-        product_upc=record.product.upc,
-    )
+_CHUNK_SIZE = 500
 
 
-def _from_record_dto(dto: SupplierStockRecordDTO, currency: Currency, product: Product) -> SupplierStockRecord:
-    instance = SupplierStockRecord(
-        id=dto.id,
-        supplier_sku=dto.supplier_sku,
-        price=dto.price,
-        currency=currency,
-        num_in_stock=dto.num_in_stock,
-        num_allocated=dto.num_allocated,
-        is_active=dto.is_active,
-        last_supplier_updated_at=dto.last_supplier_updated_at,
-        product=product,
-        supplier_id=dto.id,  # Placeholder, resolved internally
-    )
-    return instance
+class SupplierDAO:
+    """DAO для операций с поставщиками."""
 
-
-# ─── Public DAO API ───────────────────────────────────────────────────────────
-class SupplierStockRecordDAO:
     @staticmethod
-    def get_by_product_upc(product_upc: str) -> SupplierStockRecordDTO | None:
-        """Возвращает DTO записи или None. FK резолвятся внутри."""
+    def _to_dto(supplier: Supplier) -> SupplierDTO:
+        return SupplierDTO(
+            id=supplier.id,
+            name=supplier.name,
+            code=supplier.code,
+            sync_method=supplier.sync_method,
+            api_url=supplier.api_url,
+            api_extra_config=supplier.api_extra_config,
+            default_currency_code=supplier.default_currency_id,
+        )
+
+    @staticmethod
+    def get_active() -> list[SupplierDTO]:
+        """Возвращает всех активных поставщиков."""
+        return [
+            SupplierDAO._to_dto(s)
+            for s in Supplier.objects.filter(supplier_is_active=True).order_by("priority", "name")
+        ]
+
+    @staticmethod
+    def get_by_id(supplier_id: int) -> SupplierDTO | None:
+        """Возвращает поставщика по id или None."""
         try:
-            record = SupplierStockRecord.objects.select_related("currency", "product").get(product__upc=product_upc)
-            return _to_record_dto(record)
-        except SupplierStockRecord.DoesNotExist:
+            return SupplierDAO._to_dto(Supplier.objects.get(id=supplier_id))
+        except Supplier.DoesNotExist:
             return None
 
     @staticmethod
-    def get_last_updated_at(product_upc: str) -> datetime | None:
-        """Скаляр: время последнего обновления по UPC."""
-        return SupplierStockRecord.objects.filter(product__upc=product_upc).values_list("last_supplier_updated_at", flat=True).first()
+    def get_credential(supplier_id: int) -> SupplierCredentialDTO | None:
+        """Возвращает учётные данные поставщика или None."""
+        try:
+            cred = SupplierCredential.objects.get(supplier_id=supplier_id)
+            return SupplierCredentialDTO(
+                api_key=cred.api_key,
+                api_secret=cred.api_secret,
+                extra=cred.extra,
+            )
+        except SupplierCredential.DoesNotExist:
+            return None
+
+
+class SupplierStockRecordDAO:
+    """DAO для операций с записями остатков поставщиков."""
 
     @staticmethod
-    @transaction.atomic
-    def bulk_save(records_dto: list[SupplierStockRecordDTO], supplier_id: int) -> None:
-        """Принимает DTO, внутри маппит в ORM и выполняет bulk_create / bulk_update."""
-        if not records_dto:
+    def _to_dto(record: SupplierStockRecord) -> SupplierStockRecordDTO:
+        return SupplierStockRecordDTO(
+            id=record.id,
+            supplier_id=record.supplier_id,
+            product_id=record.product_id,
+            supplier_sku=record.supplier_sku,
+            price=record.price,
+            currency_code=record.currency_id,
+            num_in_stock=record.num_in_stock,
+            is_active=record.is_active,
+            last_supplier_updated_at=record.last_supplier_updated_at,
+        )
+
+    @staticmethod
+    def get_by_supplier(supplier_id: int) -> list[SupplierStockRecordDTO]:
+        """Возвращает все текущие записи остатков поставщика одним запросом."""
+        return [
+            SupplierStockRecordDAO._to_dto(r)
+            for r in SupplierStockRecord.objects.filter(supplier_id=supplier_id)
+        ]
+
+    @staticmethod
+    def bulk_create(records: list[SupplierStockRecordCreateDTO]) -> list[SupplierStockRecordDTO]:
+        """
+        Bulk-создание новых записей остатков.
+
+        После bulk_create перечитывает созданные записи из БД по (supplier_id, supplier_sku)
+        чтобы получить актуальные id — Django не гарантирует заполнение pk
+        при ignore_conflicts=True.
+        """
+        if not records:
+            return []
+
+        supplier_id = records[0].supplier_id
+        new_skus = {r.supplier_sku for r in records}
+
+        objs = [
+            SupplierStockRecord(
+                supplier_id=r.supplier_id,
+                product_id=r.product_id,
+                supplier_sku=r.supplier_sku,
+                price=r.price,
+                currency_id=r.currency_code,
+                num_in_stock=r.num_in_stock,
+                is_active=r.is_active,
+                last_supplier_updated_at=r.last_supplier_updated_at,
+            )
+            for r in records
+        ]
+
+        for i in range(0, len(objs), _CHUNK_SIZE):
+            SupplierStockRecord.objects.bulk_create(
+                objs[i : i + _CHUNK_SIZE],
+                ignore_conflicts=True,
+            )
+
+        created = SupplierStockRecord.objects.filter(
+            supplier_id=supplier_id,
+            supplier_sku__in=new_skus,
+        )
+        return [SupplierStockRecordDAO._to_dto(r) for r in created]
+
+    @staticmethod
+    def bulk_update(records: list[SupplierStockRecordUpdateDTO]) -> int:
+        """
+        Bulk-обновление существующих записей остатков.
+        Возвращает количество обновлённых записей.
+        """
+        if not records:
+            return 0
+
+        record_map = {r.id: r for r in records}
+        ids = list(record_map.keys())
+
+        objs = list(SupplierStockRecord.objects.filter(id__in=ids))
+        for obj in objs:
+            dto = record_map[obj.id]
+            obj.price = dto.price
+            obj.currency_id = dto.currency_code
+            obj.num_in_stock = dto.num_in_stock
+            obj.is_active = dto.is_active
+            obj.last_supplier_updated_at = dto.last_supplier_updated_at
+
+        total = 0
+        for i in range(0, len(objs), _CHUNK_SIZE):
+            chunk = objs[i : i + _CHUNK_SIZE]
+            SupplierStockRecord.objects.bulk_update(
+                chunk,
+                fields=["price", "currency_id", "num_in_stock", "is_active", "last_supplier_updated_at"],
+            )
+            total += len(chunk)
+
+        return total
+
+
+class SupplierStockHistoryDAO:
+    """DAO для append-only записи истории изменений остатков."""
+
+    @staticmethod
+    def bulk_create(items: list[SupplierStockHistoryCreateDTO]) -> None:
+        """Bulk-создание записей истории изменений."""
+        if not items:
             return
 
-        to_create: list[SupplierStockRecord] = []
-        to_update: list[SupplierStockRecord] = []
-        
-        # Предзагрузка валют и продуктов для избежания N+1
-        currency_codes = {dto.currency_code for dto in records_dto}
-        product_upcs = {dto.product_upc for dto in records_dto if dto.product_upc}
-        
-        currencies_map = {c.currency_code: c for c in CurrencyDAO.get_by_codes(currency_codes)}
-        products_map = {p.upc: p for p in ProductDAO.get_by_upcs(product_upcs)}
-        
-        supplier = Supplier.objects.get(id=supplier_id)
+        objs = [
+            SupplierStockHistory(
+                stock_record_id=item.stock_record_id,
+                sync_id=item.sync_id,
+                snapshot_supplier_name=item.snapshot_supplier_name,
+                snapshot_product_title=item.snapshot_product_title,
+                snapshot_product_upc=item.snapshot_product_upc,
+                snapshot_supplier_sku=item.snapshot_supplier_sku,
+                snapshot_currency_code=item.snapshot_currency_code,
+                price_before=item.price_before,
+                price_after=item.price_after,
+                num_in_stock_before=item.num_in_stock_before,
+                num_in_stock_after=item.num_in_stock_after,
+                change_type=item.change_type,
+            )
+            for item in items
+        ]
 
-        for dto in records_dto:
-            currency = currencies_map.get(dto.currency_code)
-            product = products_map.get(dto.product_upc) if dto.product_upc else None
-            
-            if not currency or not product:
-                logger.warning("Пропущена запись: валюта=%s, upc=%s", dto.currency_code, dto.product_upc)
-                continue
-
-            if dto.id is None:
-                obj = SupplierStockRecord(
-                    supplier=supplier, product=product,
-                    supplier_sku=dto.supplier_sku, price=dto.price,
-                    currency=currency, num_in_stock=dto.num_in_stock,
-                    num_allocated=dto.num_allocated, is_active=dto.is_active,
-                    last_supplier_updated_at=dto.last_supplier_updated_at,
-                )
-                to_create.append(obj)
-            else:
-                obj = SupplierStockRecord(
-                    id=dto.id, supplier_id=supplier.id, product_id=product.id,
-                    supplier_sku=dto.supplier_sku, price=dto.price,
-                    currency=currency, num_in_stock=dto.num_in_stock,
-                    num_allocated=dto.num_allocated, is_active=dto.is_active,
-                    last_supplier_updated_at=dto.last_supplier_updated_at,
-                )
-                to_update.append(obj)
-
-        if to_create:
-            SupplierStockRecord.objects.bulk_create(to_create)
-        if to_update:
-            SupplierStockRecord.objects.bulk_update(to_update, [
-                "supplier_sku", "price", "currency_id", "num_in_stock",
-                "num_allocated", "is_active", "last_supplier_updated_at"
-            ])
+        for i in range(0, len(objs), _CHUNK_SIZE):
+            SupplierStockHistory.objects.bulk_create(objs[i : i + _CHUNK_SIZE])
 
 
-class SyncLogDAO:
+class SupplierCatalogSyncDAO:
+    """DAO для управления логом синхронизаций."""
+
     @staticmethod
-    def create_running(supplier_code: str, triggered_by: str = "celery") -> SyncLogDTO:
-        supplier = Supplier.objects.get(code=supplier_code)
+    def create_running(supplier_id: int) -> int:
+        """
+        Создаёт запись синхронизации со статусом RUNNING.
+        Возвращает id созданной записи (скалярное значение).
+        """
         sync = SupplierCatalogSync.objects.create(
-            supplier=supplier,
+            supplier_id=supplier_id,
             status=SupplierCatalogSync.Status.RUNNING,
-            triggered_by=triggered_by,
-            started_at=timezone.now(),
         )
-        return SyncLogDTO(
-            id=sync.id, supplier_code=supplier.code, status=sync.status,
-            triggered_by=sync.triggered_by, started_at=sync.started_at,
+        return sync.id
+
+    @staticmethod
+    def mark_success(sync_id: int, result: CatalogSyncResultDTO) -> None:
+        """Помечает синхронизацию успешной и записывает итоговую статистику."""
+        SupplierCatalogSync.objects.filter(id=sync_id).update(
+            status=SupplierCatalogSync.Status.SUCCESS,
+            finished_at=timezone.now(),
+            total_items=result.total_items,
+            created_items=result.created_items,
+            updated_items=result.updated_items,
+            skipped_items=result.skipped_items,
+            failed_items=result.failed_items,
         )
 
     @staticmethod
-    @transaction.atomic
-    def complete(sync_id: int, status: str, stats: SyncStatsDTO, error_log: str = "") -> SyncLogDTO:
-        sync = SupplierCatalogSync.objects.get(id=sync_id)
-        sync.status = status
-        sync.finished_at = timezone.now()
-        sync.total_items, sync.created_items, sync.updated_items = stats.total, stats.created, stats.updated
-        sync.skipped_items, sync.failed_items, sync.error_log = stats.skipped, stats.failed, error_log[:65535]
-        sync.save(update_fields=[
-            "status", "finished_at", "total_items", "created_items",
-            "updated_items", "skipped_items", "failed_items", "error_log"
-        ])
-        return SyncLogDTO(
-            id=sync.id, supplier_code=sync.supplier.code, status=sync.status,
-            triggered_by=sync.triggered_by, started_at=sync.started_at,
-            finished_at=sync.finished_at,
+    def mark_failed(sync_id: int, error_log: str) -> None:
+        """Помечает синхронизацию проваленной и записывает лог ошибок."""
+        SupplierCatalogSync.objects.filter(id=sync_id).update(
+            status=SupplierCatalogSync.Status.FAILED,
+            finished_at=timezone.now(),
+            error_log=error_log,
         )
-
-    @staticmethod
-    def recover_stale_syncs(timeout_hours: int = 2) -> int:
-        threshold = timezone.now() - timedelta(hours=timeout_hours)
-        count, _ = SupplierCatalogSync.objects.filter(
-            status=SupplierCatalogSync.Status.RUNNING, started_at__lt=threshold
-        ).update(status=SupplierCatalogSync.Status.FAILED, error_log="Timeout/Zombie recovery", finished_at=timezone.now())
-        return count

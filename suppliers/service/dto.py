@@ -1,123 +1,158 @@
 """
 suppliers/service/dto.py
 
-Граница слоя данных. Все DTO строго типизированы.
-ImmutableDTOConfig — для передачи между слоями (гарантия отсутствия побочных эффектов).
-MutableDTOConfig — для внутренней обработки внутри бизнес-логики (статистика, результаты).
+Data Transfer Objects сервиса синхронизации каталогов поставщиков.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Any
+from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, field_validator
 
-from helpers.arithmetic import round_decimal
-
-# ─── Configs ──────────────────────────────────────────────────────────────────
-ImmutableDTOConfig = ConfigDict(frozen=True, arbitrary_types_allowed=True, use_enum_values=True, extra="ignore")
-MutableDTOConfig = ConfigDict(frozen=False, arbitrary_types_allowed=True, use_enum_values=True, extra="ignore")
-
-# ─── Type Aliases ─────────────────────────────────────────────────────────────
-SupplierSku = Annotated[str, Field(min_length=1)]
-Price = Annotated[Decimal, Field(ge=0)]
-CurrencyCode = Annotated[str, Field(min_length=3)]
-NumInStock = Annotated[int, Field(ge=0)]
-BatchSize = Annotated[int, Field(gt=0)]
-TimeoutSeconds = Annotated[int, Field(gt=0)]
+ImmutableDTOConfig = ConfigDict(
+    frozen=True,
+    arbitrary_types_allowed=True,
+    use_enum_values=True,
+    extra="ignore",
+)
 
 
-# ─── Input DTO ────────────────────────────────────────────────────────────────
-class SupplierProductDTO(BaseModel):
+class StockChangeType(str, Enum):
+    """Тип изменения записи остатка. Значения совпадают с SupplierStockHistory.ChangeType."""
+
+    CREATED = "CREATED"
+    PRICE_CHANGED = "PRICE_CHANGED"
+    STOCK_CHANGED = "STOCK_CHANGED"
+    BOTH_CHANGED = "BOTH_CHANGED"
+    DEACTIVATED = "DEACTIVATED"
+
+
+class SupplierDTO(BaseModel):
+    """Снимок поставщика для передачи между слоями."""
+
     model_config = ImmutableDTOConfig
-    supplier_sku: SupplierSku
-    price: Price
-    currency_code: CurrencyCode
-    num_in_stock: NumInStock
-    product_upc: str | None = None
-    product_title: str | None = None
-    config: dict[str, Any] | None = None
-    source_updated_at: datetime | None = None
+
+    id: int
+    name: str
+    code: str
+    sync_method: str
+    api_url: str
+    api_extra_config: dict
+    default_currency_code: str
 
 
-# ─── State DTO (DAO ↔ Business) ──────────────────────────────────────────────
+class SupplierCredentialDTO(BaseModel):
+    """Учётные данные поставщика."""
+
+    model_config = ImmutableDTOConfig
+
+    api_key: str
+    api_secret: str
+    extra: dict
+
+
+class RawCatalogItemDTO(BaseModel):
+    """
+    Сырая позиция каталога, полученная от источника поставщика.
+    Выход метода fetch_catalog().
+    supplier_sku используется как UPC для матчинга с Product.
+    """
+
+    model_config = ImmutableDTOConfig
+
+    supplier_sku: str
+    price: Decimal
+    currency_code: str
+    num_in_stock: int
+    supplier_updated_at: datetime | None = None
+
+    @field_validator("price")
+    @classmethod
+    def price_must_be_non_negative(cls, v: Decimal) -> Decimal:
+        if v < 0:
+            raise ValueError("price должен быть >= 0")
+        return v
+
+    @field_validator("currency_code")
+    @classmethod
+    def currency_code_upper(cls, v: str) -> str:
+        return v.strip().upper()
+
+
 class SupplierStockRecordDTO(BaseModel):
-    """Представление записи остатка на границе DAO. Immutable для передачи между слоями."""
+    """Снимок текущей записи остатка поставщика."""
+
     model_config = ImmutableDTOConfig
-    id: int | None = None
-    supplier_sku: SupplierSku
-    price: Price
-    currency_code: CurrencyCode
-    num_in_stock: NumInStock
-    num_allocated: int = 0
+
+    id: int
+    supplier_id: int
+    product_id: int
+    supplier_sku: str
+    price: Decimal
+    currency_code: str
+    num_in_stock: int
+    is_active: bool
+    last_supplier_updated_at: datetime | None
+
+
+class SupplierStockRecordCreateDTO(BaseModel):
+    """DTO для bulk-создания новых записей остатков."""
+
+    model_config = ImmutableDTOConfig
+
+    supplier_id: int
+    product_id: int
+    supplier_sku: str
+    price: Decimal
+    currency_code: str
+    num_in_stock: int
     is_active: bool = True
     last_supplier_updated_at: datetime | None = None
-    product_upc: str | None = None
 
 
-# ─── Process Result DTO ───────────────────────────────────────────────────────
-class SyncResultDTO(BaseModel):
-    model_config = MutableDTOConfig
-    supplier_sku: SupplierSku
-    created: bool = False
-    updated: bool = False
-    skipped: bool = False
-    failed: bool = False
-    error_message: str | None = None
-    price_changed: bool = False
-    stock_changed: bool = False
-    price_before: Price | None = None
-    price_after: Price | None = None
-    stock_before: NumInStock | None = None
-    stock_after: NumInStock | None = None
-    skipped_reason: str | None = None
+class SupplierStockRecordUpdateDTO(BaseModel):
+    """DTO для bulk-обновления существующих записей остатков."""
 
-
-# ─── Stats DTO ────────────────────────────────────────────────────────────────
-class SyncStatsDTO(BaseModel):
-    model_config = MutableDTOConfig
-    created: int = Field(default=0, ge=0)
-    updated: int = Field(default=0, ge=0)
-    skipped: int = Field(default=0, ge=0)
-    failed: int = Field(default=0, ge=0)
-
-    @property
-    def total(self) -> int:
-        return self.created + self.updated + self.skipped + self.failed
-
-    @property
-    def success_rate(self) -> Decimal:
-        if self.total == 0:
-            return Decimal("0.0")
-        return round_decimal(Decimal(self.created + self.updated) * 100 / Decimal(self.total), 2)
-
-    @property
-    def has_errors(self) -> bool:
-        return self.failed > 0
-
-    @property
-    def has_changes(self) -> bool:
-        return self.created > 0 or self.updated > 0
-
-
-# ─── Sync Log DTO (DAO ↔ Business) ────────────────────────────────────────────
-class SyncLogDTO(BaseModel):
-    model_config = MutableDTOConfig
-    id: int | None = None
-    supplier_code: str
-    status: str
-    triggered_by: str
-    started_at: datetime
-    finished_at: datetime | None = None
-    task_id: str | None = None
-
-
-# ─── Config DTO ───────────────────────────────────────────────────────────────
-class SyncConfigDTO(BaseModel):
     model_config = ImmutableDTOConfig
-    triggered_by: str = "celery"
-    batch_size: BatchSize = 100
-    timeout_seconds: TimeoutSeconds = 300
-    create_missing_products: bool = False
-    deactivate_missing_products: bool = False
+
+    id: int
+    price: Decimal
+    currency_code: str
+    num_in_stock: int
+    is_active: bool
+    last_supplier_updated_at: datetime | None
+
+
+class SupplierStockHistoryCreateDTO(BaseModel):
+    """DTO для bulk-создания записей истории изменений."""
+
+    model_config = ImmutableDTOConfig
+
+    stock_record_id: int
+    sync_id: int | None
+    snapshot_supplier_name: str
+    snapshot_product_title: str
+    snapshot_product_upc: str
+    snapshot_supplier_sku: str
+    snapshot_currency_code: str
+    price_before: Decimal | None
+    price_after: Decimal
+    num_in_stock_before: int | None
+    num_in_stock_after: int
+    change_type: StockChangeType
+
+
+class CatalogSyncResultDTO(BaseModel):
+    """Итог одного запуска синхронизации каталога."""
+
+    model_config = ImmutableDTOConfig
+
+    sync_id: int
+    total_items: int
+    created_items: int
+    updated_items: int
+    skipped_items: int
+    failed_items: int
