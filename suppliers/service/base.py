@@ -42,14 +42,14 @@ class AbstractSupplierSyncService(ABC):
     def __init__(
         self,
         supplier: SupplierDTO,
-        credential: SupplierCredentialDTO | None,
+        supplier_dao=SupplierDAO,
         stock_record_dao: SupplierStockRecordDAO,
         history_dao: SupplierStockHistoryDAO,
         sync_dao: SupplierCatalogSyncDAO,
         product_dao: ProductDAO,
     ) -> None:
         self.supplier = supplier
-        self.credential = credential
+        self.supplier_dao = supplier_dao
         self.stock_record_dao = stock_record_dao
         self.history_dao = history_dao
         self.sync_dao = sync_dao

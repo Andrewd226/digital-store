@@ -13,7 +13,6 @@ suppliers/service/factory.py
 from __future__ import annotations
 
 from catalogue.dao import ProductDAO
-from suppliers.models import Supplier
 from suppliers.service.base import AbstractSupplierSyncService
 from suppliers.service.dao import (
     SupplierCatalogSyncDAO,
@@ -42,12 +41,9 @@ def build_sync_service(supplier: SupplierDTO) -> AbstractSupplierSyncService:
             f"Зарегистрированные методы: {list(_SYNC_SERVICE_REGISTRY.keys())}"
         )
 
-    supplier_dao = SupplierDAO()
-    credential = supplier_dao.get_credential(supplier.id)
-
     return service_class(
         supplier=supplier,
-        credential=credential,
+        supplier_dao=SupplierDAO(),
         stock_record_dao=SupplierStockRecordDAO(),
         history_dao=SupplierStockHistoryDAO(),
         sync_dao=SupplierCatalogSyncDAO(),
