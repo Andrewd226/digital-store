@@ -1,128 +1,230 @@
 """
 suppliers/service/sync.py
 
-Оркестрация синхронизации. 
-Работает ТОЛЬКО с DTO. Не импортирует и не мутирует ORM-модели.
-Пакетные операции делегируются DAO.
+Бизнес-логика обработки каталога поставщика.
+Не обращается к ORM напрямую — только через DAO и DTO.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime
-from decimal import Decimal
-from typing import Any, Iterator
 
-import httpx
-from django.utils import timezone
+from django.db import transaction
 
-from helpers.arithmetic import round_decimal
-from suppliers.service.base import BaseService
-from suppliers.service.dao import SupplierStockRecordDAO, SyncLogDAO
-from suppliers.service.dto import SupplierProductDTO, SyncResultDTO, SupplierStockRecordDTO
+from catalogue.dao import ProductDAO
+from catalogue.dto import ProductDTO
+from suppliers.service.dao import SupplierStockHistoryDAO, SupplierStockRecordDAO
+from suppliers.service.dto import (
+    CatalogSyncResultDTO,
+    RawCatalogItemDTO,
+    StockChangeType,
+    SupplierDTO,
+    SupplierStockHistoryCreateDTO,
+    SupplierStockRecordCreateDTO,
+    SupplierStockRecordDTO,
+    SupplierStockRecordUpdateDTO,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class BaseSupplierSyncService(BaseService[SupplierProductDTO, SyncResultDTO]):
-    def __init__(self, supplier_code: str):
-        super().__init__(supplier_code)
-        self._buffer_records: list[SupplierStockRecordDTO] = []
-        self._cache_last_updated: dict[str, datetime | None] = {}
+def _determine_change_type(
+    existing: SupplierStockRecordDTO,
+    raw: RawCatalogItemDTO,
+) -> StockChangeType:
+    """Определяет тип изменения по сравнению существующей записи с новыми данными."""
+    price_changed = existing.price != raw.price or existing.currency_code != raw.currency_code
+    stock_changed = existing.num_in_stock != raw.num_in_stock
 
-    def _flush_buffer(self) -> None:
-        if self._buffer_records:
-            # Находим ID поставщика через DAO (скалярный запрос или кеш, здесь упрощено)
-            # В реальной системе supplier_id передаётся в конструктор или резолвится один раз.
-            # Для соответствия правилу: передаём supplier_code, DAO резолвит ID.
-            # Но bulk_save ожидает supplier_id. Добавим метод в DAO или передадим кеш.
-            # Оставим как есть, DAO внутри резолвит по supplier_code если нужно, 
-            # или передадим ID явно при инициализации. 
-            # Для чистоты: добавим supplier_id в конструктор.
-            pass 
+    if price_changed and stock_changed:
+        return StockChangeType.BOTH_CHANGED
+    if price_changed:
+        return StockChangeType.PRICE_CHANGED
+    return StockChangeType.STOCK_CHANGED
 
-    def _resolve_supplier_id(self) -> int:
-        # Заглушка для соответствия архитектуре. В production резолвится один раз.
-        from suppliers.service.dao import _get_supplier_id_by_code
-        return _get_supplier_id_by_code(self.supplier_code)
 
-    def process_item(self, item: SupplierProductDTO) -> SyncResultDTO:
-        result = SyncResultDTO(supplier_sku=item.supplier_sku)
-        
-        price = round_decimal(item.price, 25)
-        
-        # Получаем текущее состояние из DAO (DTO или None)
-        existing = SupplierStockRecordDAO.get_by_product_upc(item.product_upc) if item.product_upc else None
+def _is_stale(
+    existing: SupplierStockRecordDTO,
+    raw: RawCatalogItemDTO,
+) -> bool:
+    """
+    Проверяет, являются ли входящие данные устаревшими.
+    Если supplier_updated_at у входящей позиции не новее последнего обновления
+    у поставщика — обновление пропускается.
+    """
+    if raw.supplier_updated_at is None or existing.last_supplier_updated_at is None:
+        return False
+    return raw.supplier_updated_at <= existing.last_supplier_updated_at
 
-        if existing is None:
-            result.skipped = True
-            result.skipped_reason = "product_not_found"
-            return result
 
-        # Проверка stale-данных (сравнение дат)
-        last_updated = existing.last_supplier_updated_at
-        if last_updated and item.source_updated_at and item.source_updated_at <= last_updated:
-            result.skipped = True
-            result.skipped_reason = "stale_data"
-            return result
+def process_catalog(
+    supplier: SupplierDTO,
+    raw_items: list[RawCatalogItemDTO],
+    sync_id: int,
+    stock_record_dao: SupplierStockRecordDAO,
+    history_dao: SupplierStockHistoryDAO,
+    product_dao: ProductDAO,
+) -> CatalogSyncResultDTO:
+    """
+    Обрабатывает сырые позиции каталога: вычисляет diff, сохраняет изменения и историю.
 
-        price_changed = existing.price != price
-        stock_changed = existing.num_in_stock != item.num_in_stock
+    Алгоритм:
+    1. Загрузить текущие записи остатков поставщика — один запрос.
+    2. Загрузить продукты по всем SKU — один запрос.
+    3. Для каждой позиции:
+       - нет Product → skipped
+       - есть запись, данные устарели → skipped
+       - есть запись, нет изменений → skipped
+       - есть запись, есть изменения → собрать UpdateDTO + HistoryCreateDTO
+       - нет записи → собрать CreateDTO, запомнить для истории
+    4. В transaction.atomic():
+       - bulk_update существующих
+       - bulk_create новых → перечитать с id
+       - bulk_create всей истории
+    5. Вернуть CatalogSyncResultDTO.
+    """
+    # 1. Текущие записи остатков: ключ — supplier_sku
+    existing_records: dict[str, SupplierStockRecordDTO] = {
+        r.supplier_sku: r
+        for r in stock_record_dao.get_by_supplier(supplier.id)
+    }
 
-        if price_changed or stock_changed:
-            new_record = SupplierStockRecordDTO(
-                id=existing.id,
-                supplier_sku=item.supplier_sku,
-                price=price,
-                currency_code=item.currency_code,
-                num_in_stock=item.num_in_stock,
-                num_allocated=existing.num_allocated,
-                is_active=True,
-                last_supplier_updated_at=item.source_updated_at or timezone.now(),
-                product_upc=item.product_upc,
+    # 2. Продукты по всем входящим SKU: один запрос
+    all_skus = [item.supplier_sku for item in raw_items]
+    products: dict[str, ProductDTO] = {
+        p.upc: p
+        for p in product_dao.get_by_upc_list(all_skus)
+        if p.upc
+    }
+
+    to_create: list[SupplierStockRecordCreateDTO] = []
+    to_update: list[SupplierStockRecordUpdateDTO] = []
+
+    # История обновлённых записей (id известны)
+    history_for_updates: list[SupplierStockHistoryCreateDTO] = []
+
+    # Данные для истории создаваемых записей (id станут известны после bulk_create)
+    # (supplier_sku, raw, product) — для построения DTO после получения id
+    pending_create_history: list[tuple[str, RawCatalogItemDTO, ProductDTO]] = []
+
+    created_items = 0
+    updated_items = 0
+    skipped_items = 0
+    failed_items = 0
+
+    # 3. Построение diff
+    for raw in raw_items:
+        product = products.get(raw.supplier_sku)
+        if product is None:
+            skipped_items += 1
+            continue
+
+        existing = existing_records.get(raw.supplier_sku)
+
+        if existing is not None:
+            if _is_stale(existing, raw):
+                skipped_items += 1
+                continue
+
+            price_changed = existing.price != raw.price or existing.currency_code != raw.currency_code
+            stock_changed = existing.num_in_stock != raw.num_in_stock
+
+            if not price_changed and not stock_changed:
+                skipped_items += 1
+                continue
+
+            change_type = _determine_change_type(existing, raw)
+
+            to_update.append(
+                SupplierStockRecordUpdateDTO(
+                    id=existing.id,
+                    price=raw.price,
+                    currency_code=raw.currency_code,
+                    num_in_stock=raw.num_in_stock,
+                    is_active=True,
+                    last_supplier_updated_at=raw.supplier_updated_at,
+                )
             )
-            self._buffer_records.append(new_record)
-            result.updated = True
-            result.price_changed = price_changed
-            result.stock_changed = stock_changed
-            result.price_before = existing.price
-            result.price_after = price
-            result.stock_before = existing.num_in_stock
-            result.stock_after = item.num_in_stock
+            history_for_updates.append(
+                SupplierStockHistoryCreateDTO(
+                    stock_record_id=existing.id,
+                    sync_id=sync_id,
+                    snapshot_supplier_name=supplier.name,
+                    snapshot_product_title=product.title,
+                    snapshot_product_upc=product.upc or "",
+                    snapshot_supplier_sku=raw.supplier_sku,
+                    snapshot_currency_code=raw.currency_code,
+                    price_before=existing.price,
+                    price_after=raw.price,
+                    num_in_stock_before=existing.num_in_stock,
+                    num_in_stock_after=raw.num_in_stock,
+                    change_type=change_type,
+                )
+            )
+            updated_items += 1
+
         else:
-            result.skipped = True
+            to_create.append(
+                SupplierStockRecordCreateDTO(
+                    supplier_id=supplier.id,
+                    product_id=product.id,
+                    supplier_sku=raw.supplier_sku,
+                    price=raw.price,
+                    currency_code=raw.currency_code,
+                    num_in_stock=raw.num_in_stock,
+                    is_active=True,
+                    last_supplier_updated_at=raw.supplier_updated_at,
+                )
+            )
+            pending_create_history.append((raw.supplier_sku, raw, product))
+            created_items += 1
 
-        if len(self._buffer_records) >= 500:
-            self._flush()
+    # 4. Атомарное сохранение: обновления + создание + история
+    with transaction.atomic():
+        stock_record_dao.bulk_update(to_update)
 
-        return result
+        # bulk_create перечитывает созданные записи из БД, возвращая DTO с id
+        created_dtos = stock_record_dao.bulk_create(to_create)
+        created_id_map: dict[str, int] = {dto.supplier_sku: dto.id for dto in created_dtos}
 
-    def _flush(self) -> None:
-        SupplierStockRecordDAO.bulk_save(self._buffer_records, self._resolve_supplier_id())
-        self._buffer_records.clear()
+        # Строим историю для созданных записей — теперь id известны
+        history_for_creates: list[SupplierStockHistoryCreateDTO] = []
+        for sku, raw, product in pending_create_history:
+            record_id = created_id_map.get(sku)
+            if record_id is None:
+                logger.warning(
+                    "bulk_create не вернул id для sku=%s [supplier=%s]",
+                    sku,
+                    supplier.code,
+                )
+                failed_items += 1
+                created_items -= 1
+                continue
 
-    def sync(self, triggered_by: str = "celery"):
-        SyncLogDAO.recover_stale_syncs()
-        return super().sync(triggered_by)
+            history_for_creates.append(
+                SupplierStockHistoryCreateDTO(
+                    stock_record_id=record_id,
+                    sync_id=sync_id,
+                    snapshot_supplier_name=supplier.name,
+                    snapshot_product_title=product.title,
+                    snapshot_product_upc=product.upc or "",
+                    snapshot_supplier_sku=raw.supplier_sku,
+                    snapshot_currency_code=raw.currency_code,
+                    price_before=None,
+                    price_after=raw.price,
+                    num_in_stock_before=None,
+                    num_in_stock_after=raw.num_in_stock,
+                    change_type=StockChangeType.CREATED,
+                )
+            )
 
+        history_dao.bulk_create(history_for_updates + history_for_creates)
 
-class APISupplierSyncService(BaseSupplierSyncService):
-    def fetch_data(self) -> Iterator[SupplierProductDTO]:
-        # Реализация парсинга API -> yield SupplierProductDTO
-        # (без изменений по сравнению с оригиналом, только типы)
-        pass
-
-
-class ManualSupplierSyncService(BaseSupplierSyncService):
-    def __init__(self, supplier_code: str, products: list[SupplierProductDTO]):
-        super().__init__(supplier_code)
-        self._products = products
-    def fetch_data(self) -> Iterator[SupplierProductDTO]:
-        yield from self._products
-
-
-def get_sync_service(supplier_code: str, products: list[SupplierProductDTO] | None = None, sync_method: str = "MANUAL") -> BaseSupplierSyncService:
-    if sync_method == "API":
-        return APISupplierSyncService(supplier_code)
-    if sync_method == "MANUAL":
-        return ManualSupplierSyncService(supplier_code, products or [])
-    raise NotImplementedError(f"Метод синхронизации {sync_method} не реализован")
+    return CatalogSyncResultDTO(
+        sync_id=sync_id,
+        total_items=len(raw_items),
+        created_items=created_items,
+        updated_items=updated_items,
+        skipped_items=skipped_items,
+        failed_items=failed_items,
+    )
