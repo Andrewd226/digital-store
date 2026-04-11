@@ -13,7 +13,6 @@ suppliers/service/factory.py
 from __future__ import annotations
 
 from catalogue.dao import ProductDAO
-from suppliers.models import Supplier
 from suppliers.service.base import AbstractSupplierSyncService
 from suppliers.service.dao import (
     SupplierCatalogSyncDAO,
