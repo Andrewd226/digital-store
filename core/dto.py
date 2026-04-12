@@ -22,7 +22,6 @@ class CurrencyDTO(BaseModel):
 
     model_config = ImmutableDTOConfig
 
-    id: int
     currency_code: str
     name: str
     symbol: str
