@@ -41,7 +41,7 @@ def sync_supplier_catalog(self, supplier_id: int) -> dict:
         service = build_sync_service(supplier_id)
         result = service.run_sync()
         return {
-            "status": "success",
+            "status": "SUCCESS",
             "supplier_id": supplier_id,
             "sync_id": result.sync_id,
             "total_items": result.total_items,
@@ -56,7 +56,7 @@ def sync_supplier_catalog(self, supplier_id: int) -> dict:
             supplier_id,
             exc,
         )
-        return {"status": "skipped", "reason": "not_implemented", "supplier_id": supplier_id}
+        return {"status": "SKIPPED", "reason": "not_implemented", "supplier_id": supplier_id}
     except Exception as exc:
         logger.exception(
             "sync_supplier_catalog FAILED [supplier_id=%s]: %s",
@@ -81,7 +81,7 @@ def sync_all_supplier_catalogs() -> dict:
 
     if not active_supplier_ids:
         logger.info("sync_all_supplier_catalogs: нет активных поставщиков")
-        return {"status": "skipped", "reason": "no_active_suppliers"}
+        return {"status": "SKIPPED", "reason": "no_active_suppliers"}
 
     dispatched = []
     for supplier_id in active_supplier_ids:
@@ -93,4 +93,4 @@ def sync_all_supplier_catalogs() -> dict:
             task.id,
         )
 
-    return {"status": "dispatched", "tasks": dispatched}
+    return {"status": "DISPATCHED", "tasks": dispatched}

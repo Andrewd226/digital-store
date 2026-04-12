@@ -51,7 +51,7 @@ class SyncResultDTO(BaseModel):
     Возвращается из sync_currency_rates.
     """
 
-    status: str  # "success" | "failed" | "skipped"
+    status: str  #  "PENDING" | "RUNNING" | "SUCCESS" | "FAILED"
     source_id: int | None = None
     source_name: str | None = None
     rates_updated: int = 0

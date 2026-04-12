@@ -85,12 +85,12 @@ class TestRateDTO:
 class TestSyncResultDTO:
     def test_success(self):
         dto = SyncResultDTO(
-            status="success",
+            status="SUCCESS",
             source_id=1,
             source_name="CoinCap",
             rates_updated=42,
         )
-        assert dto.status == "success"
+        assert dto.status == "SUCCESS"
         assert dto.rates_updated == 42
         assert dto.error is None
 
@@ -105,8 +105,8 @@ class TestSyncResultDTO:
         assert dto.error == "Connection timeout"
 
     def test_model_dump(self):
-        dto = SyncResultDTO(status="success", source_id=1, rates_updated=5)
+        dto = SyncResultDTO(status="SUCCESS", source_id=1, rates_updated=5)
         data = dto.model_dump()
         assert isinstance(data, dict)
-        assert data["status"] == "success"
+        assert data["status"] == "SUCCESS"
         assert data["rates_updated"] == 5

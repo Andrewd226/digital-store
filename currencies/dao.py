@@ -7,8 +7,12 @@ Data Access Objects для работы с курсами валют.
 """
 
 import logging
+from django.utils import timezone
 
+from core.models import Currency
 from currencies.dto import RateDTO
+from currencies.models import CurrencyRateSource, CurrencyRateSync, ExchangeRate, ExchangeRateHistory
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +37,6 @@ class ExchangeRateDAO:
 
         Возвращает общее количество обработанных курсов.
         """
-        from django.utils import timezone
-
-        from core.models import Currency
-        from currencies.models import CurrencyRateSource, ExchangeRate, ExchangeRateHistory
-
         if not rates:
             return 0
 
@@ -182,8 +181,6 @@ class CurrencyRateSyncDAO:
         Создаёт запись синхронизации со статусом RUNNING.
         Возвращает id созданной записи.
         """
-        from currencies.models import CurrencyRateSource, CurrencyRateSync
-
         source = CurrencyRateSource.objects.get(id=source_id, is_active=True)
         sync = CurrencyRateSync.objects.create(
             source=source,
@@ -192,10 +189,6 @@ class CurrencyRateSyncDAO:
         return sync.id
 
     def mark_success(self, sync_id: int, rates_updated: int) -> None:
-        from django.utils import timezone
-
-        from currencies.models import CurrencyRateSync
-
         CurrencyRateSync.objects.filter(id=sync_id).update(
             status=CurrencyRateSync.Status.SUCCESS,
             rates_updated=rates_updated,
@@ -203,10 +196,6 @@ class CurrencyRateSyncDAO:
         )
 
     def mark_failed(self, sync_id: int, error_log: str) -> None:
-        from django.utils import timezone
-
-        from currencies.models import CurrencyRateSync
-
         CurrencyRateSync.objects.filter(id=sync_id).update(
             status=CurrencyRateSync.Status.FAILED,
             error_log=error_log,
@@ -215,8 +204,6 @@ class CurrencyRateSyncDAO:
 
     def get_active_source_ids(self) -> list[int]:
         """Возвращает список id всех активных источников курсов."""
-        from currencies.models import CurrencyRateSource
-
         return list(CurrencyRateSource.objects.filter(is_active=True).values_list("id", flat=True))
 
     def get_active_source(self, source_id: int):
@@ -224,8 +211,6 @@ class CurrencyRateSyncDAO:
         Возвращает активный источник по id.
         Возвращает None если источник не найден или неактивен.
         """
-        from currencies.models import CurrencyRateSource
-
         try:
             return CurrencyRateSource.objects.get(id=source_id, is_active=True)
         except CurrencyRateSource.DoesNotExist:

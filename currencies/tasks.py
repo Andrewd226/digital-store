@@ -254,7 +254,7 @@ def sync_currency_rates(source_id: int) -> SyncResultDTO:
 
         logger.info("Синхронизация курсов [%s]: обновлено %d курсов", source.name, updated)
         return SyncResultDTO(
-            status="success",
+            status="SUCCESS",
             source_id=source_id,
             source_name=source.name,
             rates_updated=updated,
@@ -264,7 +264,7 @@ def sync_currency_rates(source_id: int) -> SyncResultDTO:
         _sync_dao.mark_failed(sync_id, traceback.format_exc())
         logger.exception("Ошибка синхронизации курсов [%s]: %s", source.name, exc)
         return SyncResultDTO(
-            status="failed",
+            status="FAILED",
             source_id=source_id,
             source_name=source.name,
             error=str(exc),
