@@ -9,8 +9,9 @@ suppliers/service/factory.py
 1. Создать подкласс AbstractSupplierSyncService в suppliers/service/
 2. Зарегистрировать его в _SYNC_SERVICE_REGISTRY.
 """
-
 from __future__ import annotations
+
+import logging
 
 from catalogue.dao import ProductDAO
 from suppliers.service.base import AbstractSupplierSyncService
@@ -20,6 +21,8 @@ from suppliers.service.dao import (
     SupplierStockHistoryDAO,
     SupplierStockRecordDAO,
 )
+
+logger = logging.getLogger(__name__)
 
 # Реестр: sync_method → класс сервиса
 # Заполняется по мере добавления конкретных реализаций

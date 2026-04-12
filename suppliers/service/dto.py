@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -21,7 +21,7 @@ ImmutableDTOConfig = ConfigDict(
 )
 
 
-class StockChangeType(str, Enum):
+class StockChangeType(StrEnum):
     """Тип изменения записи остатка. Значения совпадают с SupplierStockHistory.ChangeType."""
 
     CREATED = "CREATED"

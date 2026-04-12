@@ -63,7 +63,7 @@ def sync_supplier_catalog(self, supplier_id: int) -> dict:
             supplier_id,
             exc,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @shared_task
