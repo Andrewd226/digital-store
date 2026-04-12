@@ -7,12 +7,17 @@ Data Access Objects для работы с курсами валют.
 """
 
 import logging
+
 from django.utils import timezone
 
 from core.models import Currency
 from currencies.dto import RateDTO
-from currencies.models import CurrencyRateSource, CurrencyRateSync, ExchangeRate, ExchangeRateHistory
-
+from currencies.models import (
+    CurrencyRateSource,
+    CurrencyRateSync,
+    ExchangeRate,
+    ExchangeRateHistory,
+)
 
 logger = logging.getLogger(__name__)
 

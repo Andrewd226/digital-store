@@ -20,7 +20,6 @@ from suppliers.service.dao import (
     SupplierStockHistoryDAO,
     SupplierStockRecordDAO,
 )
-from suppliers.service.dto import SupplierDTO
 
 # Реестр: sync_method → класс сервиса
 # Заполняется по мере добавления конкретных реализаций
