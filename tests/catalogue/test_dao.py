@@ -17,7 +17,7 @@ class TestProductDAO:
         product = ProductDAO.get_by_upc("123456789012")
         assert product == ProductDTO.model_validate(product_test)
 
-    def test_get_by_upc_not_found(self):
+    def test_get_by_upc_not_found(self, db):
         product = ProductDAO.get_by_upc("NONEXISTENT123")
         assert product is None
 

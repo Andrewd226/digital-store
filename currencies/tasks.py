@@ -241,7 +241,7 @@ def sync_currency_rates(source_id: int) -> SyncResultDTO:
     source = _sync_dao.get_active_source(source_id)
     if source is None:
         logger.warning("CurrencyRateSource id=%s не найден или неактивен", source_id)
-        return SyncResultDTO(status="skipped", source_id=source_id)
+        return SyncResultDTO(status="SKIPPED", source_id=source_id)
 
     sync_id = _sync_dao.create_running(source_id)
 

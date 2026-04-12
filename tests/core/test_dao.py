@@ -16,7 +16,7 @@ class TestCurrencyDAO:
         currency = CurrencyDAO.get_by_code("RUB")
         assert currency == rub_dto
 
-    def test_get_by_code_not_found(self):
+    def test_get_by_code_not_found(self, db):
         currency = CurrencyDAO.get_by_code("XXX")
         assert currency is None
 
