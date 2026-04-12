@@ -63,6 +63,9 @@ class AbstractSupplierSyncService(ABC):
         Реализуется в конкретном подклассе под каждый тип источника.
         """
 
+    def _get_credential(self) -> SupplierCredentialDTO | None:
+        return self.supplier_dao.get_credential(self.supplier.id)
+
     def run_sync(self) -> CatalogSyncResultDTO:
         """
         Шаблонный метод оркестрации синхронизации:
