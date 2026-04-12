@@ -37,7 +37,7 @@ def usd(db) -> Currency:
 
 @pytest.fixture
 def usd_dto(usd) -> CurrencyDTO:
-    return CurrencyDTO.validate_model(usd)
+    return CurrencyDTO.model_validate(usd)
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ def rub(db) -> Currency:
 
 @pytest.fixture
 def rub_dto(rub) -> CurrencyDTO:
-    return CurrencyDTO.validate_model(rub)
+    return CurrencyDTO.model_validate(rub)
 
 
 @pytest.fixture
@@ -69,7 +69,7 @@ def eur(db) -> Currency:
 
 @pytest.fixture
 def eur_dto(eur) -> CurrencyDTO:
-    return CurrencyDTO.validate_model(eur)
+    return CurrencyDTO.model_validate(eur)
 
 
 @pytest.fixture
@@ -83,7 +83,7 @@ def btc(db) -> Currency:
 
 @pytest.fixture
 def btc_dto(btc) -> CurrencyDTO:
-    return CurrencyDTO.validate_model(btc)
+    return CurrencyDTO.model_validate(btc)
 
 
 # ─── CurrencyRateSource Fixtures ──────────────────────────────────────────────
