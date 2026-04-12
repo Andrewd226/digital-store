@@ -14,15 +14,6 @@ from core.models import Currency
 class CurrencyDAO:
     """DAO для операций со справочником валют."""
 
-    # @staticmethod
-    # def _to_dto(currency: Currency) -> CurrencyDTO:
-    #     return CurrencyDTO(
-    #         id=currency.id,
-    #         currency_code=currency.currency_code,
-    #         name=currency.name,
-    #         symbol=currency.symbol,
-    #     )
-
     @staticmethod
     def get_by_code(currency_code: str) -> CurrencyDTO | None:
         """Получает валюту по ISO-коду (например, 'USD', 'RUB')."""

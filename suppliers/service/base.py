@@ -43,7 +43,7 @@ class AbstractSupplierSyncService(ABC):
     def __init__(
         self,
         supplier: SupplierDTO,
-        supplier_dao=SupplierDAO,
+        supplier_dao: SupplierDAO,
         stock_record_dao: SupplierStockRecordDAO,
         history_dao: SupplierStockHistoryDAO,
         sync_dao: SupplierCatalogSyncDAO,

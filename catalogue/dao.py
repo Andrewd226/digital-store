@@ -14,14 +14,6 @@ from catalogue.models import Product
 class ProductDAO:
     """DAO для операций с товарами каталога."""
 
-    # @staticmethod
-    # def _to_dto(product: Product) -> ProductDTO:
-    #     return ProductDTO(
-    #         id=product.id,
-    #         title=product.title,
-    #         upc=product.upc or None,
-    #     )
-
     @staticmethod
     def get_by_upc(upc: str | None) -> ProductDTO | None:
         """
