@@ -198,21 +198,21 @@ class TestSyncCurrencyRates:
     def test_skipped_for_inactive_source(self, inactive_source):
         result = sync_currency_rates(inactive_source.id)
 
-        assert result.status == "skipped"
+        assert result.status == "SKIPPED"
         assert result.source_id == inactive_source.id
         assert CurrencyRateSync.objects.count() == 0
 
     def test_skipped_for_missing_source(self):
         result = sync_currency_rates(99999)
 
-        assert result.status == "skipped"
+        assert result.status == "SKIPPED"
         assert CurrencyRateSync.objects.count() == 0
 
     def test_failed_on_http_error(self, coincap_source_with_credential, usd, rub):
         with patch("currencies.tasks.httpx.get", side_effect=Exception("Connection refused")):
             result = sync_currency_rates(coincap_source_with_credential.id)
 
-        assert result.status == "failed"
+        assert result.status == "FAILED"
         assert "Connection refused" in result.error
 
         sync = CurrencyRateSync.objects.get(source=coincap_source_with_credential)
