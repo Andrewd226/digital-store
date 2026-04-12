@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.TextField(unique=True, verbose_name='Название')),
-                ('source_type', models.TextField(choices=[('cbr', 'ЦБ РФ'), ('ecb', 'Европейский ЦБ'), ('open_er', 'OpenExchangeRates'), ('fixer', 'Fixer.io'), ('custom_api', 'Кастомный API')], verbose_name='Тип источника')),
+                ('source_type', models.TextField(choices=[('CBR', 'ЦБ РФ'), ('ECB', 'Европейский ЦБ'), ('OPEN_ER', 'OpenExchangeRates'), ('FIXER', 'Fixer.io'), ('CUSTOM_API', 'Кастомный API')], verbose_name='Тип источника')),
                 ('api_url', models.TextField(blank=True, verbose_name='URL API')),
                 ('api_extra_config', models.JSONField(blank=True, default=dict, help_text='Для CoinCap: {"ids": {"USD": "united-states-dollar", "RUB": "russian-ruble"}}', verbose_name='Доп. конфигурация API')),
                 ('sync_schedule', models.TextField(default='0 9 * * 1-5', help_text='"0 9 * * 1-5" — в 09:00 по рабочим дням', verbose_name='Расписание (cron)')),
@@ -88,7 +88,7 @@ class Migration(migrations.Migration):
             name='CurrencyRateSync',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('status', models.TextField(choices=[('pending', 'Ожидает'), ('running', 'Выполняется'), ('success', 'Успешно'), ('failed', 'Ошибка')], default='pending', verbose_name='Статус')),
+                ('status', models.TextField(choices=[('PENDING', 'Ожидает'), ('RUNNING', 'Выполняется'), ('SUCCESS', 'Успешно'), ('FAILED', 'Ошибка')], default='PENDING', verbose_name='Статус')),
                 ('started_at', models.DateTimeField(auto_now_add=True, verbose_name='Начало')),
                 ('finished_at', models.DateTimeField(blank=True, null=True, verbose_name='Конец')),
                 ('task_id', models.TextField(blank=True, verbose_name='ID задачи Celery')),

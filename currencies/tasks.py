@@ -212,8 +212,8 @@ class FixerFetcher(BaseFetcher):
 # ─── Fetcher registry ─────────────────────────────────────────────────────────
 
 FETCHER_MAP = {
-    "fixer": FixerFetcher,
-    "custom_api": CoinCapFetcher,
+    "FIXER": FixerFetcher,
+    "CUSTOM_API": CoinCapFetcher,
 }
 
 
