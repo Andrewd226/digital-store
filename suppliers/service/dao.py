@@ -50,10 +50,10 @@ class SupplierDAO:
         )
 
     @staticmethod
-    def get_active() -> list[SupplierDTO]:
+    def get_active_ids() -> list[int]:
         """Возвращает всех активных поставщиков."""
         return [
-            SupplierDAO._to_dto(s)
+            d.id
             for s in Supplier.objects.filter(supplier_is_active=True).order_by("priority", "name")
         ]
 

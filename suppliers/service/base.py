@@ -14,6 +14,7 @@ from abc import ABC, abstractmethod
 from catalogue.dao import ProductDAO
 from suppliers.service.dao import (
     SupplierCatalogSyncDAO,
+    SupplierDAO,
     SupplierStockHistoryDAO,
     SupplierStockRecordDAO,
 )

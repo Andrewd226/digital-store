@@ -27,13 +27,27 @@ from suppliers.service.dto import SupplierDTO
 _SYNC_SERVICE_REGISTRY: dict[str, type[AbstractSupplierSyncService]] = {}
 
 
-def build_sync_service(supplier: SupplierDTO) -> AbstractSupplierSyncService:
+def build_sync_service(supplier_id: int) -> AbstractSupplierSyncService:
     """
     Создаёт сервис синхронизации для указанного поставщика.
 
     Инжектирует все необходимые DAO.
     Поднимает NotImplementedError если sync_method не зарегистрирован.
     """
+    supplier_dao = SupplierDAO()
+    supplier = supplier_dao.get_by_id(supplier_id)
+
+    if supplier is None:
+        logger.error("sync_supplier_catalog: поставщик id=%d не найден", supplier_id)
+        return {"status": "skipped", "reason": "supplier_not_found", "supplier_id": supplier_id}
+
+    if not supplier.sync_method:
+        logger.warning(
+            "sync_supplier_catalog: поставщик id=%d не имеет sync_method",
+            supplier_id,
+        )
+        return {"status": "skipped", "reason": "no_sync_method", "supplier_id": supplier_id}
+
     service_class = _SYNC_SERVICE_REGISTRY.get(supplier.sync_method)
     if service_class is None:
         raise NotImplementedError(
@@ -43,7 +57,7 @@ def build_sync_service(supplier: SupplierDTO) -> AbstractSupplierSyncService:
 
     return service_class(
         supplier=supplier,
-        supplier_dao=SupplierDAO(),
+        supplier_dao=supplier_dao,
         stock_record_dao=SupplierStockRecordDAO(),
         history_dao=SupplierStockHistoryDAO(),
         sync_dao=SupplierCatalogSyncDAO(),
