@@ -85,16 +85,13 @@ def process_catalog(
     """
     # 1. Текущие записи остатков: ключ — supplier_sku
     existing_records: dict[str, SupplierStockRecordDTO] = {
-        r.supplier_sku: r
-        for r in stock_record_dao.get_by_supplier(supplier.id)
+        r.supplier_sku: r for r in stock_record_dao.get_by_supplier(supplier.id)
     }
 
     # 2. Продукты по всем входящим SKU: один запрос
     all_skus = [item.supplier_sku for item in raw_items]
     products: dict[str, ProductDTO] = {
-        p.upc: p
-        for p in product_dao.get_by_upc_list(all_skus)
-        if p.upc
+        p.upc: p for p in product_dao.get_by_upc_list(all_skus) if p.upc
     }
 
     to_create: list[SupplierStockRecordCreateDTO] = []
@@ -126,7 +123,9 @@ def process_catalog(
                 skipped_items += 1
                 continue
 
-            price_changed = existing.price != raw.price or existing.currency_code != raw.currency_code
+            price_changed = (
+                existing.price != raw.price or existing.currency_code != raw.currency_code
+            )
             stock_changed = existing.num_in_stock != raw.num_in_stock
 
             if not price_changed and not stock_changed:

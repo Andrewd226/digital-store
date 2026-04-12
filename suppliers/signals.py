@@ -1,6 +1,7 @@
 """
 suppliers/signals.py
 """
+
 from catalogue.models import MasterStockRecord
 
 

@@ -142,7 +142,13 @@ class SupplierStockRecordDAO:
             chunk = objs[i : i + _CHUNK_SIZE]
             SupplierStockRecord.objects.bulk_update(
                 chunk,
-                fields=["price", "currency_id", "num_in_stock", "is_active", "last_supplier_updated_at"],
+                fields=[
+                    "price",
+                    "currency_id",
+                    "num_in_stock",
+                    "is_active",
+                    "last_supplier_updated_at",
+                ],
             )
             total += len(chunk)
 

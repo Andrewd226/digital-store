@@ -30,7 +30,4 @@ class ProductDAO:
     @staticmethod
     def get_by_upc_list(upc_list: list[str]) -> list[ProductDTO]:
         """Возвращает список DTO товаров по списку UPC."""
-        return [
-            ProductDTO.model_validate(p)
-            for p in Product.objects.filter(upc__in=upc_list)
-        ]
+        return [ProductDTO.model_validate(p) for p in Product.objects.filter(upc__in=upc_list)]
