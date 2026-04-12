@@ -26,7 +26,7 @@ from suppliers.models import (
 
 
 @pytest.fixture
-def usd(db):
+def usd(db) -> Currency:
     currency, _ = Currency.objects.get_or_create(
         currency_code="USD",
         defaults={"name": "US Dollar", "currency_type": Currency.CurrencyType.FIAT, "symbol": "$"},
@@ -35,7 +35,12 @@ def usd(db):
 
 
 @pytest.fixture
-def rub(db):
+def usd_dto(usd) -> CurrencyDTO:
+    return CurrencyDTO.validate_model(usd)
+
+
+@pytest.fixture
+def rub(db) -> Currency:
     currency, _ = Currency.objects.get_or_create(
         currency_code="RUB",
         defaults={
@@ -48,7 +53,12 @@ def rub(db):
 
 
 @pytest.fixture
-def eur(db):
+def rub_dto(rub) -> CurrencyDTO:
+    return CurrencyDTO.validate_model(rub)
+
+
+@pytest.fixture
+def eur(db) -> Currency:
     currency, _ = Currency.objects.get_or_create(
         currency_code="EUR",
         defaults={"name": "Euro", "currency_type": Currency.CurrencyType.FIAT, "symbol": "€"},
@@ -57,12 +67,22 @@ def eur(db):
 
 
 @pytest.fixture
-def btc(db):
+def eur_dto(eur) -> CurrencyDTO:
+    return CurrencyDTO.validate_model(eur)
+
+
+@pytest.fixture
+def btc(db) -> Currency:
     currency, _ = Currency.objects.get_or_create(
         currency_code="BTC",
         defaults={"name": "Bitcoin", "currency_type": Currency.CurrencyType.CRYPTO, "symbol": "₿"},
     )
     return currency
+
+
+@pytest.fixture
+def btc_dto(btc) -> CurrencyDTO:
+    return CurrencyDTO.validate_model(btc)
 
 
 # ─── CurrencyRateSource Fixtures ──────────────────────────────────────────────

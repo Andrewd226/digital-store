@@ -9,6 +9,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 ImmutableDTOConfig = ConfigDict(
+    from_attributes=True,
     frozen=True,
     arbitrary_types_allowed=True,
     use_enum_values=True,

@@ -12,15 +12,15 @@ from core.dao import CurrencyDAO
 class TestCurrencyDAO:
     """Тесты работы со справочником валют."""
 
-    def test_get_by_code(self, rub):
+    def test_get_by_code(self, rub_dto):
         currency = CurrencyDAO.get_by_code("RUB")
-        assert currency == rub
+        assert currency == rub_dto
 
     def test_get_by_code_not_found(self):
         currency = CurrencyDAO.get_by_code("XXX")
         assert currency is None
 
-    def test_get_active(self, rub, usd):
+    def test_get_active(self, rub_dto, usd_dto):
         currencies = CurrencyDAO.get_active()
-        assert rub in currencies
-        assert usd in currencies
+        assert rub_dto in currencies
+        assert usd_dto in currencies

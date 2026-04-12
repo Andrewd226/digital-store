@@ -13,6 +13,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, field_validator
 
 ImmutableDTOConfig = ConfigDict(
+    from_attributes=True,
     frozen=True,
     arbitrary_types_allowed=True,
     use_enum_values=True,

@@ -37,17 +37,17 @@ _CHUNK_SIZE = 500
 class SupplierDAO:
     """DAO для операций с поставщиками."""
 
-    @staticmethod
-    def _to_dto(supplier: Supplier) -> SupplierDTO:
-        return SupplierDTO(
-            id=supplier.id,
-            name=supplier.name,
-            code=supplier.code,
-            sync_method=supplier.sync_method,
-            api_url=supplier.api_url,
-            api_extra_config=supplier.api_extra_config,
-            default_currency_code=supplier.default_currency_id,
-        )
+    # @staticmethod
+    # def _to_dto(supplier: Supplier) -> SupplierDTO:
+    #     return SupplierDTO(
+    #         id=supplier.id,
+    #         name=supplier.name,
+    #         code=supplier.code,
+    #         sync_method=supplier.sync_method,
+    #         api_url=supplier.api_url,
+    #         api_extra_config=supplier.api_extra_config,
+    #         default_currency_code=supplier.default_currency_id,
+    #     )
 
     @staticmethod
     def get_active_ids() -> list[int]:
@@ -61,7 +61,7 @@ class SupplierDAO:
     def get_by_id(supplier_id: int) -> SupplierDTO | None:
         """Возвращает поставщика по id или None."""
         try:
-            return SupplierDAO._to_dto(Supplier.objects.get(id=supplier_id))
+            return SupplierDTO.model_validate(Supplier.objects.get(id=supplier_id))
         except Supplier.DoesNotExist:
             return None
 
@@ -82,25 +82,25 @@ class SupplierDAO:
 class SupplierStockRecordDAO:
     """DAO для операций с записями остатков поставщиков."""
 
-    @staticmethod
-    def _to_dto(record: SupplierStockRecord) -> SupplierStockRecordDTO:
-        return SupplierStockRecordDTO(
-            id=record.id,
-            supplier_id=record.supplier_id,
-            product_id=record.product_id,
-            supplier_sku=record.supplier_sku,
-            price=record.price,
-            currency_code=record.currency_id,
-            num_in_stock=record.num_in_stock,
-            is_active=record.is_active,
-            last_supplier_updated_at=record.last_supplier_updated_at,
-        )
+    # @staticmethod
+    # def _to_dto(record: SupplierStockRecord) -> SupplierStockRecordDTO:
+    #     return SupplierStockRecordDTO(
+    #         id=record.id,
+    #         supplier_id=record.supplier_id,
+    #         product_id=record.product_id,
+    #         supplier_sku=record.supplier_sku,
+    #         price=record.price,
+    #         currency_code=record.currency_id,
+    #         num_in_stock=record.num_in_stock,
+    #         is_active=record.is_active,
+    #         last_supplier_updated_at=record.last_supplier_updated_at,
+    #     )
 
     @staticmethod
     def get_by_supplier(supplier_id: int) -> list[SupplierStockRecordDTO]:
         """Возвращает все текущие записи остатков поставщика одним запросом."""
         return [
-            SupplierStockRecordDAO._to_dto(r)
+            SupplierStockRecordDTO.model_validate(r)
             for r in SupplierStockRecord.objects.filter(supplier_id=supplier_id)
         ]
 
@@ -143,7 +143,7 @@ class SupplierStockRecordDAO:
             supplier_id=supplier_id,
             supplier_sku__in=new_skus,
         )
-        return [SupplierStockRecordDAO._to_dto(r) for r in created]
+        return [SupplierStockRecordDTO.model_validate(r) for r in created]
 
     @staticmethod
     def bulk_update(records: list[SupplierStockRecordUpdateDTO]) -> int:

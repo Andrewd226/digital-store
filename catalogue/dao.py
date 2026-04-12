@@ -14,13 +14,13 @@ from catalogue.models import Product
 class ProductDAO:
     """DAO для операций с товарами каталога."""
 
-    @staticmethod
-    def _to_dto(product: Product) -> ProductDTO:
-        return ProductDTO(
-            id=product.id,
-            title=product.title,
-            upc=product.upc or None,
-        )
+    # @staticmethod
+    # def _to_dto(product: Product) -> ProductDTO:
+    #     return ProductDTO(
+    #         id=product.id,
+    #         title=product.title,
+    #         upc=product.upc or None,
+    #     )
 
     @staticmethod
     def get_by_upc(upc: str | None) -> ProductDTO | None:
@@ -31,7 +31,7 @@ class ProductDAO:
         if not upc:
             return None
         try:
-            return ProductDAO._to_dto(Product.objects.get(upc=upc))
+            return ProductDTO.model_validate(Product.objects.get(upc=upc))
         except Product.DoesNotExist:
             return None
 
@@ -39,6 +39,6 @@ class ProductDAO:
     def get_by_upc_list(upc_list: list[str]) -> list[ProductDTO]:
         """Возвращает список DTO товаров по списку UPC."""
         return [
-            ProductDAO._to_dto(p)
+            ProductDTO.model_validate(p)
             for p in Product.objects.filter(upc__in=upc_list)
         ]
