@@ -1,6 +1,7 @@
 """
 suppliers/signals.py
 """
+from catalogue.models import MasterStockRecord
 
 
 def sync_master_stock_on_supplier_change(sender, instance, **kwargs):
@@ -10,8 +11,6 @@ def sync_master_stock_on_supplier_change(sender, instance, **kwargs):
     Регистрируется через post_save.connect() в SuppliersConfig.ready() —
     @receiver со строковым sender не работает.
     """
-    from catalogue.models import MasterStockRecord
-
     try:
         master = instance.product.master_stock
     except MasterStockRecord.DoesNotExist:
