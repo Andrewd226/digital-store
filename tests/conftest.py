@@ -10,6 +10,7 @@ import pytest
 from django.utils import timezone
 
 from catalogue.models import Product
+from core.dto import CurrencyDTO
 from core.models import Currency
 from currencies.models import (
     CurrencyRateSource,
