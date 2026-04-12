@@ -9,6 +9,7 @@ suppliers/service/factory.py
 1. Создать подкласс AbstractSupplierSyncService в suppliers/service/
 2. Зарегистрировать его в _SYNC_SERVICE_REGISTRY.
 """
+
 from __future__ import annotations
 
 import logging
