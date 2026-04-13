@@ -8,7 +8,6 @@ import pytest
 from decimal import Decimal
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 import pytest
 from django.db import connection, transaction
@@ -39,9 +38,6 @@ from suppliers.service.dto import (
     SupplierStockRecordUpdateDTO,
     StockChangeType,
 )
-
-if TYPE_CHECKING:
-
 
 
 # region Fixtures
