@@ -43,30 +43,12 @@ from suppliers.service.dto import (
 # region Fixtures
 
 @pytest.fixture
-def currency_usd(db) -> Currency:
-    currency, _ = Currency.objects.get_or_create(
-        code="USD",
-        defaults={"name": "US Dollar", "symbol": "$"},
-    )
-    return currency
-
-
-@pytest.fixture
-def currency_eur(db) -> Currency:
-    currency, _ = Currency.objects.get_or_create(
-        code="EUR",
-        defaults={"name": "Euro", "symbol": "€"},
-    )
-    return currency
-
-
-@pytest.fixture
-def supplier(db, currency_usd: Currency) -> Supplier:
+def supplier(db, usd: Currency) -> Supplier:
     return Supplier.objects.create(
         name="Test Supplier",
         code="TEST_SUPPLIER",
         sync_method=Supplier.SyncMethod.API,
-        default_currency=currency_usd,
+        default_currency=usd,
         priority=100,
         supplier_is_active=True,
     )
@@ -105,14 +87,14 @@ def dao_sync() -> SupplierCatalogSyncDAO:
 def stock_create_dto(
     supplier: Supplier,
     product: Product,
-    currency_usd: Currency,
+    usd: Currency,
 ) -> SupplierStockRecordCreateDTO:
     return SupplierStockRecordCreateDTO(
         supplier_id=supplier.id,
         product_id=product.id,
         supplier_sku="SUP-SKU-001",
         price=Decimal("1245.50"),
-        currency_code=currency_usd.code,
+        currency_code=usd.currency_code,
         num_in_stock=42,
         is_active=True,
         last_supplier_updated_at=datetime(2024, 6, 15, 10, 0, 0, tzinfo=timezone.utc),
@@ -123,7 +105,7 @@ def stock_create_dto(
 def bulk_create_dtos(
     supplier: Supplier,
     product: Product,
-    currency_usd: Currency,
+    usd: Currency,
 ) -> list[SupplierStockRecordCreateDTO]:
     return [
         SupplierStockRecordCreateDTO(
@@ -131,7 +113,7 @@ def bulk_create_dtos(
             product_id=product.id,
             supplier_sku=f"BULK-SKU-{i:03d}",
             price=Decimal(f"{i * 100}.{i:02d}"),
-            currency_code=currency_usd.code,
+            currency_code=usd.currency_code,
             num_in_stock=i * 5,
             is_active=True,
             last_supplier_updated_at=datetime(2024, 6, 15, 10, 0, 0, tzinfo=timezone.utc),
@@ -274,23 +256,23 @@ class TestSupplierStockRecordDAO:
         dao_stock: SupplierStockRecordDAO,
         supplier: Supplier,
         product: Product,
-        currency_eur: Currency,
+        eur: Currency,
     ) -> None:
         dto = SupplierStockRecordCreateDTO(
             supplier_id=supplier.id,
             product_id=product.id,
             supplier_sku="EUR-SKU",
             price=Decimal("99.99"),
-            currency_code=currency_eur.code,
+            currency_code=eur.currency_code,
             num_in_stock=10,
             is_active=True,
         )
 
         results = dao_stock.bulk_create([dto])
 
-        assert results[0].currency_code == currency_eur.code
+        assert results[0].currency_code == eur.currency_code
         record = SupplierStockRecord.objects.get(id=results[0].id)
-        assert record.currency.code == currency_eur.code
+        assert record.currency.code == eur.currency_code
 
 
 class TestSupplierStockHistoryDAO:
@@ -302,7 +284,7 @@ class TestSupplierStockHistoryDAO:
         dao_history: SupplierStockHistoryDAO,
         supplier: Supplier,
         product: Product,
-        currency_usd: Currency,
+        usd: Currency,
     ) -> None:
         created_records = dao_stock.bulk_create([
             SupplierStockRecordCreateDTO(
@@ -310,7 +292,7 @@ class TestSupplierStockHistoryDAO:
                 product_id=product.id,
                 supplier_sku="HIST-SKU",
                 price=Decimal("100.00"),
-                currency_code=currency_usd.code,
+                currency_code=usd.currency_code,
                 num_in_stock=50,
                 is_active=True,
             )
@@ -324,7 +306,7 @@ class TestSupplierStockHistoryDAO:
                 snapshot_product_title=product.title,
                 snapshot_product_upc=product.upc or "",
                 snapshot_supplier_sku=rec.supplier_sku,
-                snapshot_currency_code=currency_usd.code,
+                snapshot_currency_code=usd.currency_code,
                 price_before=None,
                 price_after=rec.price,
                 num_in_stock_before=None,
