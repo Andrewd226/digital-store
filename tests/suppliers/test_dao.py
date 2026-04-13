@@ -43,7 +43,7 @@ from suppliers.service.dto import (
 # region Fixtures
 
 @pytest.fixture
-def currency_usd(db: None) -> Currency:
+def currency_usd(db) -> Currency:
     currency, _ = Currency.objects.get_or_create(
         code="USD",
         defaults={"name": "US Dollar", "symbol": "$"},
@@ -52,7 +52,7 @@ def currency_usd(db: None) -> Currency:
 
 
 @pytest.fixture
-def currency_eur(db: None) -> Currency:
+def currency_eur(db) -> Currency:
     currency, _ = Currency.objects.get_or_create(
         code="EUR",
         defaults={"name": "Euro", "symbol": "€"},
@@ -61,7 +61,7 @@ def currency_eur(db: None) -> Currency:
 
 
 @pytest.fixture
-def supplier(db: None, currency_usd: Currency) -> Supplier:
+def supplier(db, currency_usd: Currency) -> Supplier:
     return Supplier.objects.create(
         name="Test Supplier",
         code="TEST_SUPPLIER",
@@ -73,7 +73,7 @@ def supplier(db: None, currency_usd: Currency) -> Supplier:
 
 
 @pytest.fixture
-def product(db: None) -> Product:
+def product(db) -> Product:
     return Product.objects.create(
         title="Test Product",
         slug="test-product",
@@ -142,7 +142,6 @@ def bulk_create_dtos(
 # endregion
 
 
-@pytest.mark.django_db
 class TestSupplierDAO:
     """Тесты для SupplierDAO."""
 
@@ -150,7 +149,7 @@ class TestSupplierDAO:
         self,
         dao_supplier: SupplierDAO,
         supplier: Supplier,
-        db: None,
+        db,
     ) -> None:
         Supplier.objects.create(
             name="Inactive",
@@ -199,7 +198,6 @@ class TestSupplierDAO:
         assert missing is None
 
 
-@pytest.mark.django_db
 class TestSupplierStockRecordDAO:
     """Тесты для SupplierStockRecordDAO."""
 
@@ -295,7 +293,6 @@ class TestSupplierStockRecordDAO:
         assert record.currency.code == currency_eur.code
 
 
-@pytest.mark.django_db
 class TestSupplierStockHistoryDAO:
     """Тесты для SupplierStockHistoryDAO."""
 
@@ -346,7 +343,6 @@ class TestSupplierStockHistoryDAO:
         assert history.price_after == Decimal("100.00")
 
 
-@pytest.mark.django_db
 class TestSupplierCatalogSyncDAO:
     """Тесты для SupplierCatalogSyncDAO."""
 
@@ -401,7 +397,7 @@ class TestSupplierCatalogSyncDAO:
         assert sync.finished_at is not None
         assert error_msg in sync.error_log
 
-    @pytest.mark.django_db(transaction=True)
+    # @pytest.mark.django_db(transaction=True)
     def test_mark_success_is_transactional(
         self,
         dao_sync: SupplierCatalogSyncDAO,
